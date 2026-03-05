@@ -1,8 +1,37 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
-function App() {
+type FileItem = {
+  id: number;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  s3Key: string;
+  s3Url: string;
+  createdAt: string;
+};
+
+type UploadResponse = {
+  success: boolean;
+  url: string;
+  key: string;
+  file?: FileItem;
+};
+
+export type S3UploaderProps = {
+  /**
+   * API base URL, ví dụ: "http://localhost:3000/api".
+   * Nếu không truyền, component sẽ gọi tới "/api/upload".
+   */
+  apiBaseUrl?: string;
+  /**
+   * Callback sau khi upload thành công (dùng cho file manager).
+   */
+  onUploaded?: (payload: UploadResponse) => void;
+};
+
+export const S3ImageUploader: React.FC<S3UploaderProps> = ({ apiBaseUrl, onUploaded }) => {
   const [file, setFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<UploadState>('idle');
@@ -42,8 +71,10 @@ function App() {
       setStatus('uploading');
       setMessage(null);
 
-      const apiBase = import.meta.env.VITE_API_URL ?? '';
-      const uploadUrl = apiBase ? `${apiBase.replace(/\/$/, '')}/upload` : '/api/upload';
+      const envBase = import.meta.env.VITE_API_URL ?? '';
+      const base = apiBaseUrl ?? envBase;
+      const uploadUrl = base ? `${base.replace(/\/$/, '')}/upload` : '/api/upload';
+
       const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
@@ -54,14 +85,18 @@ function App() {
         throw new Error(text || `Upload failed with status ${response.status}`);
       }
 
-      const data: { success: boolean; url: string } = await response.json();
+      const data: UploadResponse = await response.json();
 
-      if (data.success && data.url) {
-        setImageUrl(data.url);
-        setStatus('success');
-        setMessage('Upload thành công!');
-      } else {
+      if (!data.success || !data.url) {
         throw new Error('Phản hồi không hợp lệ từ server');
+      }
+
+      setImageUrl(data.url);
+      setStatus('success');
+      setMessage('Upload thành công!');
+
+      if (onUploaded) {
+        onUploaded(data);
       }
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -74,195 +109,374 @@ function App() {
   return (
     <div
       style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        border: '1px solid #e5e7eb',
+        borderRadius: '0.75rem',
+        padding: '1rem',
         fontFamily: 'system-ui, sans-serif',
-        background:
-          'radial-gradient(circle at top left, rgba(99,102,241,0.12), transparent 55%), radial-gradient(circle at bottom right, rgba(56,189,248,0.12), transparent 55%)',
+        width: '100%',
+        maxWidth: 360,
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <h2
+        style={{
+          fontSize: '1rem',
+          fontWeight: 600,
+          marginBottom: '0.5rem',
+          color: '#111827',
+        }}
+      >
+        Upload ảnh
+      </h2>
+      <form onSubmit={handleSubmit}>
+        <label
+          htmlFor="file-input"
+          style={{
+            display: 'block',
+            padding: '0.6rem 0.8rem',
+            borderRadius: '0.5rem',
+            border: '1px dashed #cbd5f5',
+            backgroundColor: '#f9fafb',
+            cursor: 'pointer',
+            marginBottom: '0.5rem',
+            fontSize: '0.9rem',
+          }}
+        >
+          Chọn ảnh từ máy tính (JPG, PNG, WEBP)
+        </label>
+        <input
+          id="file-input"
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+
+        {file && (
+          <div
+            style={{
+              fontSize: '0.8rem',
+              color: '#374151',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Đã chọn:{' '}
+            <span style={{ fontWeight: 600 }}>
+              {file.name} ({(file.size / 1024).toFixed(1)} KB)
+            </span>
+          </div>
+        )}
+
+        {message && (
+          <div
+            style={{
+              padding: '0.4rem 0.6rem',
+              borderRadius: '0.4rem',
+              fontSize: '0.8rem',
+              marginBottom: '0.5rem',
+              color: status === 'error' ? '#b91c1c' : '#166534',
+              backgroundColor:
+                status === 'error' ? 'rgba(254,226,226,0.8)' : 'rgba(220,252,231,0.8)',
+              border:
+                status === 'error'
+                  ? '1px solid rgba(248,113,113,0.7)'
+                  : '1px solid rgba(74,222,128,0.7)',
+            }}
+          >
+            {message}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={status === 'uploading'}
+          style={{
+            width: '100%',
+            padding: '0.6rem 0.8rem',
+            borderRadius: '0.5rem',
+            border: 'none',
+            backgroundColor: status === 'uploading' ? '#9ca3af' : '#2563eb',
+            color: 'white',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            cursor: status === 'uploading' ? 'wait' : 'pointer',
+          }}
+        >
+          {status === 'uploading' ? 'Đang upload...' : 'Upload lên S3'}
+        </button>
+      </form>
+
+      {imageUrl && (
+        <div style={{ marginTop: '0.75rem' }}>
+          <img
+            src={imageUrl}
+            alt="Uploaded to S3"
+            style={{
+              display: 'block',
+              width: '100%',
+              borderRadius: '0.5rem',
+              border: '1px solid #e5e7eb',
+              objectFit: 'contain',
+              maxHeight: 240,
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+type FileManagerProps = {
+  apiBaseUrl?: string;
+  reloadKey: number;
+};
+
+const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
+  const [items, setItems] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchFiles = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const envBase = import.meta.env.VITE_API_URL ?? '';
+      const base = apiBaseUrl ?? envBase;
+      const listUrl = base ? `${base.replace(/\/$/, '')}/files` : '/api/files';
+
+      const res = await fetch(listUrl);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Fetch failed with status ${res.status}`);
+      }
+
+      const data: { success: boolean; items: FileItem[] } = await res.json();
+      if (!data.success || !Array.isArray(data.items)) {
+        throw new Error('Phản hồi không hợp lệ từ server');
+      }
+
+      setItems(data.items);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      setError('Không tải được danh sách file');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
+
+  return (
+    <div
+      style={{
+        border: '1px solid #e5e7eb',
+        borderRadius: '0.75rem',
+        padding: '1rem',
+        fontFamily: 'system-ui, sans-serif',
+        width: '100%',
+        backgroundColor: '#ffffff',
       }}
     >
       <div
         style={{
-          padding: '2rem 2.5rem',
-          borderRadius: '1.25rem',
-          boxShadow: '0 18px 45px rgba(15,23,42,0.18)',
-          background: 'white',
-          width: '100%',
-          maxWidth: 520,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '0.5rem',
+          gap: '0.5rem',
         }}
       >
-        <h1
+        <h2
           style={{
-            fontSize: '1.8rem',
-            marginBottom: '0.25rem',
-            fontWeight: 700,
-            letterSpacing: '-0.03em',
+            fontSize: '1rem',
+            fontWeight: 600,
+            color: '#111827',
           }}
         >
-          Upload ảnh lên S3
-        </h1>
-        <p style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '0.95rem' }}>
-          Chọn 1 file ảnh, gửi lên backend NestJS, backend sẽ upload lên AWS S3 và trả lại
-          URL public để hiển thị bên dưới.
+          Danh sách file
+        </h2>
+        <button
+          type="button"
+          onClick={fetchFiles}
+          style={{
+            padding: '0.3rem 0.6rem',
+            fontSize: '0.8rem',
+            borderRadius: '999px',
+            border: '1px solid #d1d5db',
+            backgroundColor: '#f9fafb',
+            cursor: 'pointer',
+          }}
+        >
+          Làm mới
+        </button>
+      </div>
+
+      {loading && <p style={{ fontSize: '0.85rem' }}>Đang tải...</p>}
+      {error && (
+        <p style={{ fontSize: '0.85rem', color: '#b91c1c', marginBottom: '0.5rem' }}>
+          {error}
         </p>
+      )}
 
-        <form onSubmit={handleSubmit}>
-          <label
-            htmlFor="file-input"
-            style={{
-              display: 'block',
-              padding: '0.85rem 1rem',
-              borderRadius: '0.75rem',
-              border: '1px dashed #cbd5f5',
-              backgroundColor: '#f9fafb',
-              cursor: 'pointer',
-              marginBottom: '0.75rem',
-            }}
-          >
-            <span style={{ fontWeight: 600, color: '#111827' }}>
-              Chọn ảnh từ máy tính
-            </span>
-            <br />
-            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-              JPG, PNG, WEBP, tối đa 5MB
-            </span>
-          </label>
-          <input
-            id="file-input"
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
+      {!loading && items.length === 0 && !error && (
+        <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Chưa có file nào.</p>
+      )}
 
-          {file && (
-            <div
+      {items.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+            gap: '0.75rem',
+            marginTop: '0.25rem',
+          }}
+        >
+          {items.map((item) => (
+            <a
+              key={item.id}
+              href={item.s3Url}
+              target="_blank"
+              rel="noreferrer"
               style={{
-                fontSize: '0.85rem',
-                color: '#374151',
-                marginBottom: '0.75rem',
-              }}
-            >
-              Đã chọn:{' '}
-              <span style={{ fontWeight: 600 }}>
-                {file.name} ({(file.size / 1024).toFixed(1)} KB)
-              </span>
-            </div>
-          )}
-
-          {message && (
-            <div
-              style={{
-                padding: '0.5rem 0.75rem',
-                borderRadius: '0.5rem',
-                fontSize: '0.85rem',
-                marginBottom: '0.75rem',
-                color: status === 'error' ? '#b91c1c' : '#166534',
-                backgroundColor:
-                  status === 'error' ? 'rgba(254,226,226,0.8)' : 'rgba(220,252,231,0.8)',
-                border:
-                  status === 'error'
-                    ? '1px solid rgba(248,113,113,0.7)'
-                    : '1px solid rgba(74,222,128,0.7)',
-              }}
-            >
-              {message}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={status === 'uploading'}
-            style={{
-              width: '100%',
-              padding: '0.8rem 1rem',
-              borderRadius: '0.75rem',
-              border: 'none',
-              background:
-                status === 'uploading'
-                  ? 'linear-gradient(to right, #9ca3af, #6b7280)'
-                  : 'linear-gradient(to right, #4f46e5, #0ea5e9)',
-              color: 'white',
-              fontWeight: 600,
-              fontSize: '0.95rem',
-              cursor: status === 'uploading' ? 'wait' : 'pointer',
-              transition: 'transform 0.08s ease, box-shadow 0.08s ease',
-              boxShadow:
-                status === 'uploading'
-                  ? '0 0 0 rgba(0,0,0,0)'
-                  : '0 10px 25px rgba(37,99,235,0.35)',
-            }}
-          >
-            {status === 'uploading' ? 'Đang upload...' : 'Upload lên S3'}
-          </button>
-        </form>
-
-        {imageUrl && (
-          <div
-            style={{
-              marginTop: '1.75rem',
-              borderTop: '1px solid #e5e7eb',
-              paddingTop: '1.25rem',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '1rem',
-                fontWeight: 600,
-                marginBottom: '0.75rem',
-                color: '#111827',
-              }}
-            >
-              Ảnh đã upload
-            </h2>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.75rem',
+                textDecoration: 'none',
+                color: 'inherit',
               }}
             >
               <div
                 style={{
-                  borderRadius: '0.75rem',
-                  overflow: 'hidden',
-                  border: '1px solid #e5e7eb',
-                  backgroundColor: '#f9fafb',
-                  maxHeight: 320,
-                }}
-              >
-                <img
-                  src={imageUrl}
-                  alt="Uploaded to S3"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    backgroundColor: '#000',
-                  }}
-                />
-              </div>
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  color: '#4b5563',
-                  wordBreak: 'break-all',
-                  backgroundColor: '#f3f4f6',
-                  padding: '0.5rem 0.75rem',
                   borderRadius: '0.5rem',
+                  border: '1px solid #e5e7eb',
+                  overflow: 'hidden',
+                  backgroundColor: '#f9fafb',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
                 }}
               >
+                <div
+                  style={{
+                    width: '100%',
+                    paddingTop: '70%',
+                    position: 'relative',
+                    backgroundColor: '#111827',
+                  }}
+                >
+                  <img
+                    src={item.s3Url}
+                    alt={item.originalName}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    padding: '0.4rem 0.5rem',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.15rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      color: '#111827',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={item.originalName}
+                  >
+                    {item.originalName}
+                  </div>
+                  <div style={{ color: '#6b7280' }}>
+                    {(item.size / 1024).toFixed(1)} KB
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Component App đơn giản dùng lại `S3ImageUploader`
+ * để có thể chạy dev như một SPA nhỏ,
+ * đồng thời export `S3ImageUploader` như một "library component".
+ */
+const App: React.FC = () => {
+  const [reloadKey, setReloadKey] = useState(0);
+  const apiBase = import.meta.env.VITE_API_URL ?? '';
+
+  const handleUploaded = () => {
+    setReloadKey((prev) => prev + 1);
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6',
+        padding: '1rem',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 960,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+        }}
+      >
+        <div>
+          <h1
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              marginBottom: '0.25rem',
+              color: '#111827',
+            }}
+          >
+            File manager mini
+          </h1>
+          <p style={{ fontSize: '0.9rem', color: '#6b7280' }}>
+            Upload ảnh lên S3 và xem lại danh sách file đã lưu (metadata trong MySQL).
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
+            gap: '1rem',
+          }}
+        >
+          <S3ImageUploader apiBaseUrl={apiBase || undefined} onUploaded={handleUploaded} />
+          <FileManager apiBaseUrl={apiBase || undefined} reloadKey={reloadKey} />
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default App;
+
 
