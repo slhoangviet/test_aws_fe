@@ -253,7 +253,6 @@ function App() {
                   borderRadius: '0.5rem',
                 }}
               >
-                URL: <a href={imageUrl} target="_blank" rel="noreferrer">{imageUrl}</a>
               </div>
             </div>
           </div>
