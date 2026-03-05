@@ -42,7 +42,9 @@ function App() {
       setStatus('uploading');
       setMessage(null);
 
-      const response = await fetch('http://localhost:3000/upload', {
+      const apiBase = import.meta.env.VITE_API_URL ?? '';
+      const uploadUrl = apiBase ? `${apiBase.replace(/\/$/, '')}/upload` : '/api/upload';
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });
