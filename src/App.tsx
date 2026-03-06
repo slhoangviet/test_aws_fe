@@ -235,14 +235,19 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
   const [items, setItems] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const getBaseUrl = () => {
+    const envBase = import.meta.env.VITE_API_URL ?? '';
+    return apiBaseUrl ?? envBase;
+  };
 
   const fetchFiles = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const envBase = import.meta.env.VITE_API_URL ?? '';
-      const base = apiBaseUrl ?? envBase;
+      const base = getBaseUrl();
       const listUrl = base ? `${base.replace(/\/$/, '')}/files` : '/api/files';
 
       const res = await fetch(listUrl);
@@ -282,39 +287,16 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
         backgroundColor: '#ffffff',
       }}
     >
-      <div
+      <h2
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          fontSize: '1rem',
+          fontWeight: 600,
+          color: '#111827',
           marginBottom: '0.5rem',
-          gap: '0.5rem',
         }}
       >
-        <h2
-          style={{
-            fontSize: '1rem',
-            fontWeight: 600,
-            color: '#111827',
-          }}
-        >
-          Danh sách file
-        </h2>
-        <button
-          type="button"
-          onClick={fetchFiles}
-          style={{
-            padding: '0.3rem 0.6rem',
-            fontSize: '0.8rem',
-            borderRadius: '999px',
-            border: '1px solid #d1d5db',
-            backgroundColor: '#f9fafb',
-            cursor: 'pointer',
-          }}
-        >
-          Làm mới
-        </button>
-      </div>
+        Danh sách file
+      </h2>
 
       {loading && <p style={{ fontSize: '0.85rem' }}>Đang tải...</p>}
       {error && (
@@ -337,25 +319,29 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
           }}
         >
           {items.map((item) => (
-            <a
+            <div
               key={item.id}
-              href={item.s3Url}
-              target="_blank"
-              rel="noreferrer"
               style={{
-                textDecoration: 'none',
-                color: 'inherit',
+                borderRadius: '0.5rem',
+                border: '1px solid #e5e7eb',
+                overflow: 'hidden',
+                backgroundColor: '#f9fafb',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                position: 'relative',
               }}
             >
-              <div
+              <a
+                href={item.s3Url}
+                target="_blank"
+                rel="noreferrer"
                 style={{
-                  borderRadius: '0.5rem',
-                  border: '1px solid #e5e7eb',
-                  overflow: 'hidden',
-                  backgroundColor: '#f9fafb',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  flex: 1,
                   display: 'flex',
                   flexDirection: 'column',
-                  height: '100%',
                 }}
               >
                 <div
@@ -403,8 +389,51 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
                     {(item.size / 1024).toFixed(1)} KB
                   </div>
                 </div>
-              </div>
-            </a>
+              </a>
+              <button
+                type="button"
+                disabled={deletingId === item.id}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (deletingId === item.id) return;
+                  const base = getBaseUrl();
+                  const deleteUrl = base
+                    ? `${base.replace(/\/$/, '')}/files/${item.id}`
+                    : `/api/files/${item.id}`;
+                  try {
+                    setDeletingId(item.id);
+                    const res = await fetch(deleteUrl, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Xóa thất bại');
+                    await fetchFiles();
+                  } catch (err) {
+                    // eslint-disable-next-line no-console
+                    console.error(err);
+                  } finally {
+                    setDeletingId(null);
+                  }
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '0.25rem',
+                  right: '0.25rem',
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  borderRadius: '0.25rem',
+                  border: 'none',
+                  background: 'rgba(0,0,0,0.6)',
+                  color: '#fff',
+                  fontSize: '0.75rem',
+                  cursor: deletingId === item.id ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+                title="Xóa ảnh"
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
       )}
