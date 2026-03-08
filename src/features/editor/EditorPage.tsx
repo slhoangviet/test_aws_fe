@@ -1,49 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useI18n } from '../../i18n';
+import { apiFetch, getApiBase } from '../../utils/api';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
-
-type FileItem = {
-  id: number;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  s3Key: string;
-  s3Url: string;
-  createdAt: string;
+const fullUrl = (path: string) => {
+  const base = getApiBase();
+  return path.startsWith('http') ? path : (base ? `${base}${path}` : path);
 };
 
-const fullUrl = (path: string) =>
-  path.startsWith('http') ? path : (API_BASE ? `${API_BASE.replace(/\/$/, '')}${path}` : path);
-
 const styles = {
-  app: {
-    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-    minHeight: '100vh',
-    background: '#14141a',
-    color: '#e4e4e7',
-    display: 'flex',
-    flexDirection: 'column' as const,
-  },
-  header: {
-    height: 48,
-    background: '#1c1c24',
-    borderBottom: '1px solid #27272a',
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 16px',
-    gap: 16,
-  },
-  logo: { fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', color: '#fff' },
-  btn: (primary: boolean) => ({
-    padding: '6px 14px',
-    borderRadius: 6,
-    border: 'none',
-    background: primary ? '#6366f1' : '#27272a',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-  }),
   main: {
     flex: 1,
     display: 'flex',
@@ -68,6 +32,7 @@ const styles = {
     justifyContent: 'center',
     padding: 24,
     minHeight: 0,
+    position: 'relative' as const,
   },
   rightPanel: {
     width: 280,
@@ -97,9 +62,30 @@ const styles = {
     cursor: 'pointer',
   },
   thumbCardActive: { borderColor: '#6366f1' },
+  btn: (primary: boolean) => ({
+    padding: '6px 14px',
+    borderRadius: 6,
+    border: 'none',
+    background: primary ? '#6366f1' : '#27272a',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+  }),
 };
 
-export default function App() {
+type FileItem = {
+  id: number;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  s3Key: string;
+  s3Url: string;
+  createdAt: string;
+};
+
+export default function EditorPage() {
+  const { t, locale } = useI18n();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -108,7 +94,6 @@ export default function App() {
   const [processLoading, setProcessLoading] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
 
-  // Tool state
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [cropLeft, setCropLeft] = useState('');
@@ -124,8 +109,7 @@ export default function App() {
   const fetchFiles = useCallback(async () => {
     try {
       setLoading(true);
-      const url = API_BASE ? `${API_BASE.replace(/\/$/, '')}/files` : '/api/files';
-      const res = await fetch(url);
+      const res = await apiFetch('/files', { locale });
       if (!res.ok) throw new Error('Load failed');
       const data = await res.json();
       if (data.success && Array.isArray(data.items)) setFiles(data.items);
@@ -134,7 +118,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     fetchFiles();
@@ -149,17 +133,16 @@ export default function App() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const url = API_BASE ? `${API_BASE.replace(/\/$/, '')}/upload` : '/api/upload';
-      const res = await fetch(url, { method: 'POST', body: formData });
+      const res = await apiFetch('/upload', { method: 'POST', body: formData, locale });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Upload failed');
+      if (!res.ok) throw new Error(data.message || t('errorUpload'));
       if (data.success && data.file) {
         setFiles((prev) => [data.file, ...prev]);
         setSelectedId(data.file.id);
         setProcessResult(null);
       }
     } catch (err) {
-      setProcessError(err instanceof Error ? err.message : 'Upload failed');
+      setProcessError(err instanceof Error ? err.message : t('errorUpload'));
     } finally {
       setUploading(false);
     }
@@ -171,9 +154,6 @@ export default function App() {
     setProcessError(null);
     setProcessResult(null);
     try {
-      const url = API_BASE
-        ? `${API_BASE.replace(/\/$/, '')}/files/${selectedId}/process`
-        : `/api/files/${selectedId}/process`;
       const body: Record<string, unknown> = {
         format,
         quality,
@@ -192,17 +172,18 @@ export default function App() {
       if (cl != null && ct != null && cw != null && ch != null && !Number.isNaN(cl) && !Number.isNaN(ct) && !Number.isNaN(cw) && !Number.isNaN(ch)) {
         body.crop = { left: cl, top: ct, width: cw, height: ch };
       }
-      const res = await fetch(url, {
+      const res = await apiFetch(`/files/${selectedId}/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        locale,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || 'Process failed');
+      if (!res.ok) throw new Error(data.message || data.error || t('errorProcess'));
       if (data.url) setProcessResult(data.url);
       else throw new Error('No URL');
     } catch (err) {
-      setProcessError(err instanceof Error ? err.message : 'Process failed');
+      setProcessError(err instanceof Error ? err.message : t('errorProcess'));
     } finally {
       setProcessLoading(false);
     }
@@ -214,8 +195,7 @@ export default function App() {
   const deleteFile = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const url = API_BASE ? `${API_BASE.replace(/\/$/, '')}/files/${id}` : `/api/files/${id}`;
-      const res = await fetch(url, { method: 'DELETE' });
+      const res = await apiFetch(`/files/${id}`, { method: 'DELETE', locale });
       if (!res.ok) throw new Error('Delete failed');
       const next = files.filter((f) => f.id !== id);
       setFiles(next);
@@ -224,91 +204,64 @@ export default function App() {
         setProcessResult(null);
       }
     } catch {
-      setProcessError('Xóa thất bại');
+      setProcessError(t('errorDelete'));
     }
   };
 
   return (
-    <div style={styles.app}>
-      <header style={styles.header}>
-        <span style={styles.logo}>Photo Editor</span>
+    <>
+      <div style={{ padding: '8px 16px', background: '#1c1c24', borderBottom: '1px solid #27272a', display: 'flex', alignItems: 'center' }}>
         <label style={{ cursor: 'pointer' }}>
-          <input
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={handleUpload}
-            disabled={uploading}
-          />
-          <span style={styles.btn(true)}>{uploading ? 'Đang tải...' : 'Mở ảnh'}</span>
+          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
+          <span style={styles.btn(true)}>{uploading ? t('uploading') : t('openImage')}</span>
         </label>
-      </header>
-
+      </div>
       <div style={styles.main}>
         <aside style={styles.leftPanel}>
           <section>
-            <div style={styles.panelTitle}>Kích thước</div>
+            <div style={styles.panelTitle}>{t('size')}</div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <div style={{ flex: 1 }}>
-                <label style={styles.label}>Rộng (px)</label>
-                <input
-                  type="number"
-                  placeholder="Tự động"
-                  value={width}
-                  onChange={(e) => setWidth(e.target.value)}
-                  style={styles.input}
-                  min={1}
-                  max={4000}
-                />
+                <label style={styles.label}>{t('widthPx')}</label>
+                <input type="number" placeholder={t('auto')} value={width} onChange={(e) => setWidth(e.target.value)} style={styles.input} min={1} max={4000} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={styles.label}>Cao (px)</label>
-                <input
-                  type="number"
-                  placeholder="Tự động"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                  style={styles.input}
-                  min={1}
-                  max={4000}
-                />
+                <label style={styles.label}>{t('heightPx')}</label>
+                <input type="number" placeholder={t('auto')} value={height} onChange={(e) => setHeight(e.target.value)} style={styles.input} min={1} max={4000} />
               </div>
             </div>
           </section>
-
           <section>
-            <div style={styles.panelTitle}>Cắt (Crop)</div>
+            <div style={styles.panelTitle}>{t('crop')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div><label style={styles.label}>Left</label><input type="number" value={cropLeft} onChange={(e) => setCropLeft(e.target.value)} style={styles.input} min={0} /></div>
-              <div><label style={styles.label}>Top</label><input type="number" value={cropTop} onChange={(e) => setCropTop(e.target.value)} style={styles.input} min={0} /></div>
-              <div><label style={styles.label}>Width</label><input type="number" value={cropW} onChange={(e) => setCropW(e.target.value)} style={styles.input} min={1} /></div>
-              <div><label style={styles.label}>Height</label><input type="number" value={cropH} onChange={(e) => setCropH(e.target.value)} style={styles.input} min={1} /></div>
+              <div><label style={styles.label}>{t('left')}</label><input type="number" value={cropLeft} onChange={(e) => setCropLeft(e.target.value)} style={styles.input} min={0} /></div>
+              <div><label style={styles.label}>{t('top')}</label><input type="number" value={cropTop} onChange={(e) => setCropTop(e.target.value)} style={styles.input} min={0} /></div>
+              <div><label style={styles.label}>{t('width')}</label><input type="number" value={cropW} onChange={(e) => setCropW(e.target.value)} style={styles.input} min={1} /></div>
+              <div><label style={styles.label}>{t('height')}</label><input type="number" value={cropH} onChange={(e) => setCropH(e.target.value)} style={styles.input} min={1} /></div>
             </div>
           </section>
-
           <section>
-            <div style={styles.panelTitle}>Điều chỉnh</div>
+            <div style={styles.panelTitle}>{t('adjust')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div><label style={styles.label}>Độ sáng {brightness.toFixed(1)}</label><div style={styles.sliderRow}><input type="range" min={0.2} max={2} step={0.1} value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} style={styles.slider} /></div></div>
-              <div><label style={styles.label}>Tương phản {contrast.toFixed(1)}</label><div style={styles.sliderRow}><input type="range" min={0.2} max={2} step={0.1} value={contrast} onChange={(e) => setContrast(Number(e.target.value))} style={styles.slider} /></div></div>
-              <div><label style={styles.label}>Bão hòa {saturation.toFixed(1)}</label><div style={styles.sliderRow}><input type="range" min={0} max={2} step={0.1} value={saturation} onChange={(e) => setSaturation(Number(e.target.value))} style={styles.slider} /></div></div>
+              <div><label style={styles.label}>{t('brightness')} {brightness.toFixed(1)}</label><div style={styles.sliderRow}><input type="range" min={0.2} max={2} step={0.1} value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} style={styles.slider} /></div></div>
+              <div><label style={styles.label}>{t('contrast')} {contrast.toFixed(1)}</label><div style={styles.sliderRow}><input type="range" min={0.2} max={2} step={0.1} value={contrast} onChange={(e) => setContrast(Number(e.target.value))} style={styles.slider} /></div></div>
+              <div><label style={styles.label}>{t('saturation')} {saturation.toFixed(1)}</label><div style={styles.sliderRow}><input type="range" min={0} max={2} step={0.1} value={saturation} onChange={(e) => setSaturation(Number(e.target.value))} style={styles.slider} /></div></div>
             </div>
           </section>
-
           <section>
-            <div style={styles.panelTitle}>Xuất file</div>
+            <div style={styles.panelTitle}>{t('exportTitle')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div>
-                <label style={styles.label}>Định dạng</label>
+                <label style={styles.label}>{t('format')}</label>
                 <select value={format} onChange={(e) => setFormat(e.target.value as 'webp' | 'jpeg' | 'png')} style={styles.input}>
                   <option value="webp">WebP</option>
                   <option value="jpeg">JPEG</option>
                   <option value="png">PNG</option>
                 </select>
               </div>
-              <div><label style={styles.label}>Chất lượng {quality}%</label><input type="range" min={1} max={100} value={quality} onChange={(e) => setQuality(Number(e.target.value))} style={styles.slider} /></div>
+              <div><label style={styles.label}>{t('quality')} {quality}%</label><input type="range" min={1} max={100} value={quality} onChange={(e) => setQuality(Number(e.target.value))} style={styles.slider} /></div>
               <button type="button" onClick={handleProcess} disabled={processLoading || selectedId == null} style={styles.btn(true)}>
-                {processLoading ? 'Đang xử lý...' : 'Áp dụng / Xuất'}
+                {processLoading ? t('processing') : t('applyExport')}
               </button>
             </div>
           </section>
@@ -316,25 +269,25 @@ export default function App() {
 
         <main style={styles.canvas}>
           {displayUrl ? (
-            <img
-              src={displayUrl}
-              alt=""
-              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-            />
+            <img src={displayUrl} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           ) : (
             <div style={{ textAlign: 'center', color: '#71717a', fontSize: 14 }}>
-              Chọn ảnh bên phải hoặc nhấn <strong>Mở ảnh</strong> để bắt đầu
+              {t('canvasPlaceholder')} <strong>{t('canvasPlaceholderAction')}</strong> {t('canvasPlaceholderSuffix')}
             </div>
           )}
-          {processError && <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#7f1d1d', color: '#fecaca', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>{processError}</div>}
+          {processError && (
+            <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#7f1d1d', color: '#fecaca', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
+              {processError}
+            </div>
+          )}
         </main>
 
         <aside style={styles.rightPanel}>
-          <div style={styles.panelTitle}>Thư viện ảnh</div>
+          <div style={styles.panelTitle}>{t('library')}</div>
           {loading ? (
-            <div style={{ color: '#71717a', fontSize: 13 }}>Đang tải...</div>
+            <div style={{ color: '#71717a', fontSize: 13 }}>{t('libraryLoading')}</div>
           ) : files.length === 0 ? (
-            <div style={{ color: '#71717a', fontSize: 13 }}>Chưa có ảnh. Nhấn Mở ảnh để upload.</div>
+            <div style={{ color: '#71717a', fontSize: 13 }}>{t('libraryEmpty')}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {files.map((item) => (
@@ -343,27 +296,16 @@ export default function App() {
                   style={{ ...styles.thumbCard, ...(selectedId === item.id ? styles.thumbCardActive : {}) }}
                   onClick={() => { setSelectedId(item.id); setProcessResult(null); setProcessError(null); }}
                 >
-                  <div style={{ aspectRatio: '16/10', position: 'relative', background: '#0c0c10' }}>
+                  <div style={{ aspectRatio: '16/10', position: 'relative' as const, background: '#0c0c10' }}>
                     <img src={fullUrl(item.s3Url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     <button
                       type="button"
                       onClick={(e) => deleteFile(item.id, e)}
                       style={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 4,
-                        width: 22,
-                        height: 22,
-                        borderRadius: 4,
-                        border: 'none',
-                        background: 'rgba(0,0,0,0.7)',
-                        color: '#fff',
-                        fontSize: 14,
-                        cursor: 'pointer',
-                        lineHeight: 1,
-                        padding: 0,
+                        position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 4, border: 'none',
+                        background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 14, cursor: 'pointer', lineHeight: 1, padding: 0,
                       }}
-                      title="Xóa"
+                      title={t('delete')}
                     >
                       ×
                     </button>
@@ -375,12 +317,12 @@ export default function App() {
           )}
           {processResult && (
             <div style={{ marginTop: 12 }}>
-              <div style={styles.panelTitle}>Kết quả</div>
-              <a href={fullUrl(processResult)} download target="_blank" rel="noreferrer" style={{ ...styles.btn(true), display: 'inline-block', textDecoration: 'none', marginTop: 4 }}>Tải xuống</a>
+              <div style={styles.panelTitle}>{t('result')}</div>
+              <a href={fullUrl(processResult)} download target="_blank" rel="noreferrer" style={{ ...styles.btn(true), display: 'inline-block', textDecoration: 'none', marginTop: 4 }}>{t('download')}</a>
             </div>
           )}
         </aside>
       </div>
-    </div>
+    </>
   );
 }
