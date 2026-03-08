@@ -21,8 +21,9 @@ type UploadResponse = {
 
 export type S3UploaderProps = {
   /**
-   * API base URL, ví dụ: "http://localhost:3000/api".
-   * Nếu không truyền, component sẽ gọi tới "/api/upload".
+   * API base URL (subdomain api.{domain}), ví dụ: "https://api.yourdomain.com".
+   * Không dùng /api trong path; backend phục vụ trực tiếp tại gốc (vd: /upload, /files).
+   * Nếu không truyền, dùng VITE_API_URL; fallback "/api/..." chỉ cho dev proxy.
    */
   apiBaseUrl?: string;
   /**
