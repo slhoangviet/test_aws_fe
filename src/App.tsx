@@ -495,7 +495,7 @@ const EmailTestForm: React.FC<EmailTestProps> = ({ apiBaseUrl }) => {
       }}
     >
       <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>
-        Gửi email test (SES SMTP)
+        Gửi email test (SES IAM)
       </h2>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <label style={{ fontSize: '0.85rem', fontWeight: 500 }}>
