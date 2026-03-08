@@ -442,6 +442,141 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
   );
 };
 
+type EmailTestProps = { apiBaseUrl?: string };
+
+const EmailTestForm: React.FC<EmailTestProps> = ({ apiBaseUrl }) => {
+  const [to, setTo] = useState('');
+  const [subject, setSubject] = useState('Test email từ backend');
+  const [text, setText] = useState('Nội dung test từ FE.');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState<string | null>(null);
+
+  const getBaseUrl = () => {
+    const envBase = import.meta.env.VITE_API_URL ?? '';
+    return apiBaseUrl ?? envBase;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const base = getBaseUrl();
+    const url = base ? `${base.replace(/\/$/, '')}/email/send-test` : '/api/email/send-test';
+
+    setStatus('sending');
+    setMessage(null);
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: to.trim(), subject: subject.trim() || undefined, text: text.trim() || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || `HTTP ${res.status}`);
+      }
+
+      setStatus('success');
+      setMessage('Email đã gửi thành công.');
+    } catch (err) {
+      setStatus('error');
+      setMessage(err instanceof Error ? err.message : 'Gửi email thất bại.');
+    }
+  };
+
+  return (
+    <div
+      style={{
+        border: '1px solid #e5e7eb',
+        borderRadius: '0.75rem',
+        padding: '1rem',
+        fontFamily: 'system-ui, sans-serif',
+        backgroundColor: '#ffffff',
+      }}
+    >
+      <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>
+        Gửi email test (SES SMTP)
+      </h2>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+          Email người nhận <span style={{ color: '#dc2626' }}>*</span>
+        </label>
+        <input
+          type="email"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="your@email.com"
+          required
+          style={{
+            padding: '0.5rem 0.75rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #d1d5db',
+            fontSize: '0.9rem',
+          }}
+        />
+        <label style={{ fontSize: '0.85rem', fontWeight: 500 }}>Tiêu đề</label>
+        <input
+          type="text"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder="Test email từ backend"
+          style={{
+            padding: '0.5rem 0.75rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #d1d5db',
+            fontSize: '0.9rem',
+          }}
+        />
+        <label style={{ fontSize: '0.85rem', fontWeight: 500 }}>Nội dung</label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Nội dung email..."
+          rows={3}
+          style={{
+            padding: '0.5rem 0.75rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #d1d5db',
+            fontSize: '0.9rem',
+            resize: 'vertical',
+          }}
+        />
+        {message && (
+          <div
+            style={{
+              padding: '0.4rem 0.6rem',
+              borderRadius: '0.4rem',
+              fontSize: '0.8rem',
+              color: status === 'error' ? '#b91c1c' : '#166534',
+              backgroundColor:
+                status === 'error' ? 'rgba(254,226,226,0.8)' : 'rgba(220,252,231,0.8)',
+            }}
+          >
+            {message}
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={status === 'sending'}
+          style={{
+            padding: '0.6rem 0.8rem',
+            borderRadius: '0.5rem',
+            border: 'none',
+            backgroundColor: status === 'sending' ? '#9ca3af' : '#2563eb',
+            color: 'white',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+            cursor: status === 'sending' ? 'wait' : 'pointer',
+            alignSelf: 'flex-start',
+          }}
+        >
+          {status === 'sending' ? 'Đang gửi...' : 'Gửi email test'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 /**
  * Component App đơn giản dùng lại `S3ImageUploader`
  * để có thể chạy dev như một SPA nhỏ,
@@ -502,6 +637,8 @@ const App: React.FC = () => {
           <S3ImageUploader apiBaseUrl={apiBase || undefined} onUploaded={handleUploaded} />
           <FileManager apiBaseUrl={apiBase || undefined} reloadKey={reloadKey} />
         </div>
+
+        <EmailTestForm apiBaseUrl={apiBase || undefined} />
       </div>
     </div>
   );
