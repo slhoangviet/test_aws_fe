@@ -1,7 +1,8 @@
 /**
  * Gọi API kèm header x-locale để BE trả message lỗi đúng ngôn ngữ.
+ * Next.js: dùng process.env.NEXT_PUBLIC_API_URL (có sẵn ở client).
  */
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const API_BASE = typeof window !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL ?? '') : '';
 
 export type ApiFetchOptions = RequestInit & { locale?: string };
 
@@ -15,5 +16,6 @@ export function apiFetch(url: string, options: ApiFetchOptions = {}): Promise<Re
 }
 
 export function getApiBase(): string {
+  if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_API_URL ?? '';
   return API_BASE ? `${API_BASE.replace(/\/$/, '')}` : '';
 }

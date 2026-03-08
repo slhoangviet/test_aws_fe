@@ -5,6 +5,8 @@ node_modules/
 dist/
 build/
 .vite/
+.next/
+out/
 
 # Logs
 logs/
@@ -27,4 +29,3 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
-

@@ -1,6 +1,10 @@
+'use client';
+
 import React from 'react';
-import { useI18n } from '../../i18n';
-import { LanguagePicker } from '../LanguagePicker';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useI18n } from '@/i18n';
+import { LanguagePicker } from '@/components/LanguagePicker';
 
 const styles = {
   header: {
@@ -17,10 +21,7 @@ const styles = {
     fontSize: 15,
     letterSpacing: '-0.02em',
     color: '#fff',
-    cursor: 'pointer',
-    border: 'none',
-    background: 'transparent',
-    padding: 0,
+    textDecoration: 'none',
   },
   nav: {
     display: 'flex',
@@ -30,49 +31,32 @@ const styles = {
   navLink: (active: boolean) => ({
     padding: '6px 12px',
     borderRadius: 6,
-    border: 'none',
     background: 'transparent',
     color: active ? '#fff' : '#71717a',
     fontSize: 13,
     fontWeight: active ? 600 : 500,
-    cursor: 'pointer',
+    textDecoration: 'none',
   }),
 };
 
-type Page = 'home' | 'editor';
-
-type HeaderProps = {
-  page: Page;
-  onNavigate: (page: Page) => void;
-};
-
-export default function Header({ page, onNavigate }: HeaderProps) {
+export default function Header() {
   const { t } = useI18n();
+  const pathname = usePathname();
+  const isHome = pathname === '/';
+  const isEditor = pathname.startsWith('/editor');
 
   return (
     <header style={styles.header}>
-      <button
-        type="button"
-        style={styles.logo}
-        onClick={() => onNavigate('home')}
-      >
+      <Link href="/" style={styles.logo}>
         {t('appTitle')}
-      </button>
+      </Link>
       <nav style={styles.nav}>
-        <button
-          type="button"
-          style={styles.navLink(page === 'home')}
-          onClick={() => onNavigate('home')}
-        >
+        <Link href="/" style={styles.navLink(isHome)}>
           {t('navHome')}
-        </button>
-        <button
-          type="button"
-          style={styles.navLink(page === 'editor')}
-          onClick={() => onNavigate('editor')}
-        >
+        </Link>
+        <Link href="/editor" style={styles.navLink(isEditor)}>
           {t('navEditor')}
-        </button>
+        </Link>
       </nav>
       <LanguagePicker />
     </header>

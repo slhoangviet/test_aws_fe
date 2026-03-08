@@ -16,6 +16,7 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number]['code'];
 export const DEFAULT_LOCALE: Locale = 'vi';
 
 export function getStoredLocale(locales: readonly { code: Locale }[]): Locale {
+  if (typeof window === 'undefined') return DEFAULT_LOCALE;
   try {
     const v = localStorage.getItem(STORAGE_KEY);
     const found = locales.find((l) => l.code === v);

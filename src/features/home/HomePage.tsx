@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
-import { useI18n } from '../../i18n';
+import Link from 'next/link';
+import { useI18n } from '@/i18n';
 
 const styles = {
   wrap: {
@@ -53,12 +56,12 @@ const styles = {
     fontSize: 15,
     fontWeight: 600,
     cursor: 'pointer',
+    textDecoration: 'none',
+    display: 'inline-block',
   },
 };
 
-type HomePageProps = { onGoEditor: () => void };
-
-export default function HomePage({ onGoEditor }: HomePageProps) {
+export default function HomePage() {
   const { t } = useI18n();
 
   return (
@@ -81,9 +84,9 @@ export default function HomePage({ onGoEditor }: HomePageProps) {
         </div>
       </div>
 
-      <button type="button" onClick={onGoEditor} style={styles.cta}>
+      <Link href="/editor" style={styles.cta}>
         {t('homeCta')}
-      </button>
+      </Link>
     </div>
   );
 }

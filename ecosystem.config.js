@@ -2,12 +2,11 @@ module.exports = {
   apps: [
     {
       name: 'test_aws_fe',
-      script: 'node_modules/vite/bin/vite.js',
-      // Production: build trước rồi chạy preview:
-      //   cd test_aws_fe && yarn install && yarn build
-      args: 'preview --host 0.0.0.0 --port 4173',
+      script: 'node_modules/next/dist/bin/next',
+      args: 'start',
       instances: 1,
       exec_mode: 'fork',
+      cwd: __dirname,
       env: {
         NODE_ENV: 'development',
       },
@@ -18,4 +17,3 @@ module.exports = {
     },
   ],
 };
-

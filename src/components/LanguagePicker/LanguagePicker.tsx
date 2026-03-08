@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useI18n } from '../../i18n';
+import { useI18n } from '@/i18n';
 
 const styles = {
   wrap: {

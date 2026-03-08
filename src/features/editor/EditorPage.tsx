@@ -1,6 +1,8 @@
+'use client';
+
 import React, { useEffect, useState, useCallback } from 'react';
-import { useI18n } from '../../i18n';
-import { apiFetch, getApiBase } from '../../utils/api';
+import { useI18n } from '@/i18n';
+import { apiFetch, getApiBase } from '@/utils/api';
 
 const fullUrl = (path: string) => {
   const base = getApiBase();

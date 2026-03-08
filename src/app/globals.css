@@ -8,6 +8,7 @@
 
 body {
   min-height: 100vh;
-  background: #f3f4f6;
+  background: #14141a;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: #e4e4e7;
 }
-

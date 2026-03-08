@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { SUPPORTED_LOCALES, getStoredLocale, setStoredLocale, type Locale } from './config';
 import { translations, type TranslationKey } from './translations';
