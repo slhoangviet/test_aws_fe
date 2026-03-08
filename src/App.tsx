@@ -136,14 +136,14 @@ export const S3ImageUploader: React.FC<S3UploaderProps> = ({ apiBaseUrl, onUploa
             display: 'block',
             padding: '0.6rem 0.8rem',
             borderRadius: '0.5rem',
-            border: '1px dashed #cbd5f5',
-            backgroundColor: '#f9fafb',
+            border: '1px dashed #6366f1',
+            backgroundColor: '#eef2ff',
             cursor: 'pointer',
             marginBottom: '0.5rem',
             fontSize: '0.9rem',
           }}
         >
-          Chọn ảnh từ máy tính (JPG, PNG, WEBP)
+          Chọn ảnh (JPG, PNG, WEBP — tối đa 10MB)
         </label>
         <input
           id="file-input"
@@ -203,7 +203,7 @@ export const S3ImageUploader: React.FC<S3UploaderProps> = ({ apiBaseUrl, onUploa
             cursor: status === 'uploading' ? 'wait' : 'pointer',
           }}
         >
-          {status === 'uploading' ? 'Đang upload...' : 'Upload lên S3'}
+          {status === 'uploading' ? 'Đang tải lên...' : 'Thêm ảnh'}
         </button>
       </form>
 
@@ -237,6 +237,14 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [selectedForProcess, setSelectedForProcess] = useState<number | null>(null);
+  const [processWidth, setProcessWidth] = useState<string>('800');
+  const [processHeight, setProcessHeight] = useState<string>('');
+  const [processFormat, setProcessFormat] = useState<'webp' | 'jpeg' | 'png'>('webp');
+  const [processQuality, setProcessQuality] = useState<number>(80);
+  const [processLoading, setProcessLoading] = useState(false);
+  const [processResult, setProcessResult] = useState<{ url: string } | null>(null);
+  const [processError, setProcessError] = useState<string | null>(null);
 
   const getBaseUrl = () => {
     const envBase = import.meta.env.VITE_API_URL ?? '';
@@ -296,7 +304,7 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
           marginBottom: '0.5rem',
         }}
       >
-        Danh sách file
+        Danh sách ảnh
       </h2>
 
       {loading && <p style={{ fontSize: '0.85rem' }}>Đang tải...</p>}
@@ -307,7 +315,7 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
       )}
 
       {!loading && items.length === 0 && !error && (
-        <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Chưa có file nào.</p>
+        <p style={{ fontSize: '0.85rem', color: '#6b7280' }}>Chưa có ảnh nào. Hãy upload ảnh trước.</p>
       )}
 
       {items.length > 0 && (
@@ -434,8 +442,211 @@ const FileManager: React.FC<FileManagerProps> = ({ apiBaseUrl, reloadKey }) => {
               >
                 ×
               </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedForProcess(item.id);
+                  setProcessResult(null);
+                  setProcessError(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  bottom: '0.25rem',
+                  right: '0.25rem',
+                  padding: '0.2rem 0.4rem',
+                  borderRadius: '0.25rem',
+                  border: 'none',
+                  background: '#6366f1',
+                  color: '#fff',
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+                title="Xử lý ảnh (resize, đổi format)"
+              >
+                Xử lý
+              </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {selectedForProcess != null && items.some((i) => i.id === selectedForProcess) && (
+        <div
+          style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            borderRadius: '0.75rem',
+            border: '1px solid #e5e7eb',
+            backgroundColor: '#f8fafc',
+          }}
+        >
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#111827', marginBottom: '0.75rem' }}>
+            Xử lý ảnh — resize, đổi định dạng, nén
+          </h3>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const base = getBaseUrl();
+              const url = base
+                ? `${base.replace(/\/$/, '')}/files/${selectedForProcess}/process`
+                : `/api/files/${selectedForProcess}/process`;
+              setProcessLoading(true);
+              setProcessError(null);
+              setProcessResult(null);
+              try {
+                const w = processWidth.trim() ? parseInt(processWidth, 10) : undefined;
+                const h = processHeight.trim() ? parseInt(processHeight, 10) : undefined;
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    width: w && !Number.isNaN(w) ? w : undefined,
+                    height: h && !Number.isNaN(h) ? h : undefined,
+                    format: processFormat,
+                    quality: processQuality,
+                  }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || data.error || `Lỗi ${res.status}`);
+                if (!data.url) throw new Error('Không nhận được URL ảnh');
+                setProcessResult({ url: data.url });
+              } catch (err) {
+                setProcessError(err instanceof Error ? err.message : 'Xử lý thất bại');
+              } finally {
+                setProcessLoading(false);
+              }
+            }}
+            style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}
+          >
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+              Rộng (px)
+              <input
+                type="number"
+                min={1}
+                max={4000}
+                value={processWidth}
+                onChange={(e) => setProcessWidth(e.target.value)}
+                style={{ padding: '0.4rem 0.5rem', borderRadius: '0.4rem', border: '1px solid #d1d5db', width: '5rem' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+              Cao (px)
+              <input
+                type="number"
+                min={1}
+                max={4000}
+                value={processHeight}
+                onChange={(e) => setProcessHeight(e.target.value)}
+                placeholder="Tự động"
+                style={{ padding: '0.4rem 0.5rem', borderRadius: '0.4rem', border: '1px solid #d1d5db', width: '5rem' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+              Định dạng
+              <select
+                value={processFormat}
+                onChange={(e) => setProcessFormat(e.target.value as 'webp' | 'jpeg' | 'png')}
+                style={{ padding: '0.4rem 0.5rem', borderRadius: '0.4rem', border: '1px solid #d1d5db' }}
+              >
+                <option value="webp">WebP</option>
+                <option value="jpeg">JPEG</option>
+                <option value="png">PNG</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8rem' }}>
+              Chất lượng (1–100)
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={processQuality}
+                onChange={(e) => setProcessQuality(Number(e.target.value))}
+                style={{ padding: '0.4rem 0.5rem', borderRadius: '0.4rem', border: '1px solid #d1d5db', width: '4rem' }}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={processLoading}
+              style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                background: processLoading ? '#94a3b8' : '#6366f1',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: processLoading ? 'wait' : 'pointer',
+              }}
+            >
+              {processLoading ? 'Đang xử lý...' : 'Tạo bản xử lý'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedForProcess(null);
+                setProcessResult(null);
+                setProcessError(null);
+              }}
+              style={{
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.5rem',
+                border: '1px solid #d1d5db',
+                background: '#fff',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              Đóng
+            </button>
+          </form>
+          {processError && (
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#b91c1c' }}>{processError}</p>
+          )}
+          {processResult && (
+            <div style={{ marginTop: '0.75rem' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.35rem' }}>Kết quả:</p>
+              {(() => {
+                const base = getBaseUrl().replace(/\/$/, '');
+                const fullUrl = processResult.url.startsWith('http') ? processResult.url : (base ? base + processResult.url : processResult.url);
+                return (
+                  <>
+                    <img
+                      src={fullUrl}
+                      alt="Đã xử lý"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 280,
+                        borderRadius: '0.5rem',
+                        border: '1px solid #e5e7eb',
+                        display: 'block',
+                      }}
+                    />
+                    <a
+                      href={fullUrl}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '0.5rem',
+                        padding: '0.4rem 0.75rem',
+                        borderRadius: '0.4rem',
+                        background: '#0f766e',
+                        color: 'white',
+                        textDecoration: 'none',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Tải xuống ảnh đã xử lý
+                    </a>
+                  </>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -614,23 +825,23 @@ const App: React.FC = () => {
         <div>
           <h1
             style={{
-              fontSize: '1.5rem',
+              fontSize: '1.75rem',
               fontWeight: 700,
               marginBottom: '0.25rem',
               color: '#111827',
             }}
           >
-            File manager mini
+            Web xử lý ảnh
           </h1>
-          <p style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-            Upload ảnh lên S3 và xem lại danh sách file đã lưu (metadata trong MySQL).
+          <p style={{ fontSize: '0.95rem', color: '#6b7280' }}>
+            Upload ảnh, resize theo kích thước, đổi định dạng (WebP, JPEG, PNG) và nén chất lượng. Ảnh lưu trên S3, xử lý bằng Sharp trên server.
           </p>
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
+            gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
             gap: '1rem',
           }}
         >
@@ -638,7 +849,14 @@ const App: React.FC = () => {
           <FileManager apiBaseUrl={apiBase || undefined} reloadKey={reloadKey} />
         </div>
 
-        <EmailTestForm apiBaseUrl={apiBase || undefined} />
+        <details style={{ marginTop: '0.5rem' }}>
+          <summary style={{ cursor: 'pointer', fontSize: '0.9rem', color: '#6b7280' }}>
+            Công cụ khác — Gửi email test (SES)
+          </summary>
+          <div style={{ marginTop: '0.5rem' }}>
+            <EmailTestForm apiBaseUrl={apiBase || undefined} />
+          </div>
+        </details>
       </div>
     </div>
   );
