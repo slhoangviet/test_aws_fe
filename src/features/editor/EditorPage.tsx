@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/i18n';
 import { apiFetch, getApiBase } from '@/utils/api';
 
@@ -63,7 +63,7 @@ const styles = {
     border: '2px solid transparent',
     cursor: 'pointer',
   },
-  thumbCardActive: { borderColor: '#6366f1' },
+  thumbCardActive: { border: '2px solid #6366f1' },
   btn: (primary: boolean) => ({
     padding: '6px 14px',
     borderRadius: 6,
@@ -194,6 +194,83 @@ export default function EditorPage() {
   const selectedFile = files.find((f) => f.id === selectedId);
   const displayUrl = processResult ? fullUrl(processResult) : selectedFile ? fullUrl(selectedFile.s3Url) : null;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!displayUrl) {
+      setImgSize(null);
+      imgRef.current = null;
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      imgRef.current = img;
+      setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
+    };
+    img.onerror = () => setImgSize(null);
+    img.src = displayUrl;
+    return () => {
+      img.src = '';
+      imgRef.current = null;
+    };
+  }, [displayUrl]);
+
+  useEffect(() => {
+    if (!imgRef.current || !containerRef.current || !canvasRef.current || !imgSize) return;
+    const img = imgRef.current;
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    const imgW = imgSize.w;
+    const imgH = imgSize.h;
+
+    const cl = cropLeft.trim() ? parseInt(cropLeft, 10) : 0;
+    const ct = cropTop.trim() ? parseInt(cropTop, 10) : 0;
+    const cwRaw = cropW.trim() ? parseInt(cropW, 10) : imgW - cl;
+    const chRaw = cropH.trim() ? parseInt(cropH, 10) : imgH - ct;
+    const srcLeft = Math.max(0, Number.isNaN(cl) ? 0 : cl);
+    const srcTop = Math.max(0, Number.isNaN(ct) ? 0 : ct);
+    const srcW = Math.max(1, Math.min(Number.isNaN(cwRaw) ? imgW : cwRaw, imgW - srcLeft));
+    const srcH = Math.max(1, Math.min(Number.isNaN(chRaw) ? imgH : chRaw, imgH - srcTop));
+
+    const outW = width.trim() ? parseInt(width, 10) : undefined;
+    const outH = height.trim() ? parseInt(height, 10) : undefined;
+    let destW = srcW;
+    let destH = srcH;
+    if (outW !== undefined && !Number.isNaN(outW) && outW > 0 && outH !== undefined && !Number.isNaN(outH) && outH > 0) {
+      destW = outW;
+      destH = outH;
+    } else if (outW !== undefined && !Number.isNaN(outW) && outW > 0) {
+      destW = outW;
+      destH = Math.round((outW * srcH) / srcW);
+    } else if (outH !== undefined && !Number.isNaN(outH) && outH > 0) {
+      destH = outH;
+      destW = Math.round((outH * srcW) / srcH);
+    }
+    const contW = container.clientWidth || 1;
+    const contH = container.clientHeight || 1;
+    const scale = Math.min(contW / destW, contH / destH, 1);
+    const dw = Math.round(destW * scale);
+    const dh = Math.round(destH * scale);
+    if (dw <= 0 || dh <= 0) return;
+
+    canvas.width = dw;
+    canvas.height = dh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.filter = `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`;
+    ctx.drawImage(img, srcLeft, srcTop, srcW, srcH, 0, 0, dw, dh);
+  }, [imgSize, brightness, contrast, saturation, cropLeft, cropTop, cropW, cropH, width, height]);
+
+  const filterStyle = {
+    filter: `brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`,
+  };
+
+  const showCanvas = displayUrl && imgSize;
+
   const deleteFile = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -269,9 +346,20 @@ export default function EditorPage() {
           </section>
         </aside>
 
-        <main style={styles.canvas}>
+        <main ref={containerRef} style={styles.canvas}>
           {displayUrl ? (
-            <img src={displayUrl} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            showCanvas ? (
+              <canvas
+                ref={canvasRef}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              <img
+                src={displayUrl}
+                alt=""
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', ...filterStyle }}
+              />
+            )
           ) : (
             <div style={{ textAlign: 'center', color: '#71717a', fontSize: 14 }}>
               {t('canvasPlaceholder')} <strong>{t('canvasPlaceholderAction')}</strong> {t('canvasPlaceholderSuffix')}
