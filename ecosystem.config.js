@@ -8,10 +8,7 @@ module.exports = {
       exec_mode: 'fork',
       cwd: __dirname,
       env: {
-        NODE_ENV: 'development',
-      },
-      env_production: {
-        NODE_ENV: 'production',
+        PORT: 3000,
       },
       watch: false,
     },
