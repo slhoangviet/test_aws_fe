@@ -9,6 +9,7 @@ export type PixiEditorViewProps = {
   crop: { left: number; top: number; w: number; h: number };
   outputWidth?: number;
   outputHeight?: number;
+  rotation?: 0 | 90 | 180 | 270;
   brightness: number;
   contrast: number;
   saturation: number;
@@ -30,6 +31,7 @@ export function PixiEditorView({
   crop,
   outputWidth,
   outputHeight,
+  rotation = 0,
   brightness,
   contrast,
   saturation,
@@ -52,12 +54,12 @@ export function PixiEditorView({
 
   // Store ALL mutable props in a ref so draw() always reads fresh values
   const propsRef = useRef({
-    crop, outputWidth, outputHeight, brightness, contrast, saturation,
+    crop, outputWidth, outputHeight, rotation, brightness, contrast, saturation,
     temperature, tint, highlights, shadows, whites,
     cropMode, onDisplaySize, imgSize,
   });
   propsRef.current = {
-    crop, outputWidth, outputHeight, brightness, contrast, saturation,
+    crop, outputWidth, outputHeight, rotation, brightness, contrast, saturation,
     temperature, tint, highlights, shadows, whites,
     cropMode, onDisplaySize, imgSize,
   };
@@ -157,12 +159,20 @@ export function PixiEditorView({
       } else if (p.outputHeight && p.outputHeight > 0) {
         destH = p.outputHeight; destW = Math.round((p.outputHeight * srcW) / srcH);
       }
+      if (p.rotation === 90 || p.rotation === 270) {
+        [destW, destH] = [destH, destW];
+      }
     }
 
     const scale = Math.min(contW / destW, contH / destH, 1);
-    const viewW = Math.round(destW * scale);
-    const viewH = Math.round(destH * scale);
-    if (viewW <= 0 || viewH <= 0) return;
+    const drawW = Math.round(destW * scale);
+    const drawH = Math.round(destH * scale);
+    if (drawW <= 0 || drawH <= 0) return;
+
+    // Khi xoay 90°/270°, canvas cần swap kích thước để chứa nội dung đã xoay
+    const rot90 = !p.cropMode && (p.rotation === 90 || p.rotation === 270);
+    const viewW = rot90 ? drawH : drawW;
+    const viewH = rot90 ? drawW : drawH;
 
     if (p.cropMode && p.onDisplaySize) p.onDisplaySize(viewW, viewH);
 
@@ -175,7 +185,16 @@ export function PixiEditorView({
     ctx.filter = `brightness(${p.brightness}) contrast(${p.contrast}) saturate(${p.saturation})`;
 
     ctx.clearRect(0, 0, viewW, viewH);
-    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, viewW, viewH);
+    if (p.rotation && !p.cropMode) {
+      ctx.save();
+      ctx.translate(viewW / 2, viewH / 2);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+      ctx.translate(-drawW / 2, -drawH / 2);
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, drawW, drawH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, viewW, viewH);
+    }
     ctx.filter = 'none';
 
     // Temperature overlay (warm = orange, cool = blue)
@@ -295,7 +314,7 @@ export function PixiEditorView({
   }, [
     draw, previewKey, imgSize, imgLoaded,
     crop.left, crop.top, crop.w, crop.h,
-    outputWidth, outputHeight,
+    outputWidth, outputHeight, rotation,
     brightness, contrast, saturation,
     temperature, tint, highlights, shadows, whites,
     cropMode,

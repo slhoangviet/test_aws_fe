@@ -61,6 +61,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     shadowsLabel: 'Vùng tối',
     whitesLabel: 'Màu trắng',
     resetAdjustments: 'Đặt lại các tùy chỉnh',
+    rotate: 'Xoay ảnh',
   },
   en: {
     appTitle: 'Photo Editor',
@@ -120,6 +121,7 @@ export const translations: Record<Locale, Record<string, string>> = {
     shadowsLabel: 'Shadows',
     whitesLabel: 'Whites',
     resetAdjustments: 'Reset adjustments',
+    rotate: 'Rotate image',
   },
 };
 

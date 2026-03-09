@@ -154,6 +154,8 @@ export default function EditorPage() {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
 
+  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
+
   // Crop
   const [cropLeft, setCropLeft] = useState('');
   const [cropTop, setCropTop] = useState('');
@@ -307,10 +309,12 @@ export default function EditorPage() {
       } else if (outH && outH > 0) {
         destH = outH; destW = Math.round((outH * crop.w) / crop.h);
       }
+      const rot = rotation === 90 || rotation === 270;
+      if (rot) [destW, destH] = [destH, destW];
 
       const offscreen = document.createElement('canvas');
-      offscreen.width = destW;
-      offscreen.height = destH;
+      offscreen.width = rot ? destH : destW;
+      offscreen.height = rot ? destW : destH;
       const ctx = offscreen.getContext('2d', { willReadFrequently: true });
       if (!ctx) throw new Error('Canvas context unavailable');
 
@@ -318,7 +322,18 @@ export default function EditorPage() {
       const cm = 1 + contrast;
       const sm = 1 + saturation;
       ctx.filter = `brightness(${bm}) contrast(${cm}) saturate(${sm})`;
-      ctx.drawImage(img, crop.left, crop.top, crop.w, crop.h, 0, 0, destW, destH);
+      if (rotation) {
+        const cw = offscreen.width;
+        const ch = offscreen.height;
+        ctx.save();
+        ctx.translate(cw / 2, ch / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.translate(-destW / 2, -destH / 2);
+        ctx.drawImage(img, crop.left, crop.top, crop.w, crop.h, 0, 0, destW, destH);
+        ctx.restore();
+      } else {
+        ctx.drawImage(img, crop.left, crop.top, crop.w, crop.h, 0, 0, destW, destH);
+      }
       ctx.filter = 'none';
 
       if (temperature !== 0) {
@@ -758,6 +773,7 @@ export default function EditorPage() {
                 crop={getCropNumbers() ?? { left: 0, top: 0, w: imgSize?.w ?? 1, h: imgSize?.h ?? 1 }}
                 outputWidth={width.trim() ? parseInt(width, 10) : undefined}
                 outputHeight={height.trim() ? parseInt(height, 10) : undefined}
+                rotation={rotation}
                 brightness={brightnessMultiplier}
                 contrast={contrastMultiplier}
                 saturation={saturationMultiplier}
@@ -769,7 +785,7 @@ export default function EditorPage() {
                 cropMode={cropMode}
                 onDisplaySize={cropMode ? (w, h) => setCropDisplaySize({ w, h }) : undefined}
                 onImgSizeDetected={handleImgSizeDetected}
-                previewKey={`${cropLeft}|${cropTop}|${cropW}|${cropH}|${width}|${height}|${brightness}|${contrast}|${saturation}|${temperature}|${tintVal}|${highlightsVal}|${shadowsVal}|${whitesVal}`}
+                previewKey={`${cropLeft}|${cropTop}|${cropW}|${cropH}|${width}|${height}|${rotation}|${brightness}|${contrast}|${saturation}|${temperature}|${tintVal}|${highlightsVal}|${shadowsVal}|${whitesVal}`}
               />
             </>
           ) : (
@@ -800,8 +816,8 @@ export default function EditorPage() {
               <ToolbarBtn title={t('crop')} onClick={enterCropMode} disabled={!imgSize}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2v4H2v2h4v10a2 2 0 002 2h10v4h2v-4h4v-2H14V6h4V4H8V2H6zm2 4h8v8H8V6z"/></svg>
               </ToolbarBtn>
-              <ToolbarBtn title={t('size')} onClick={() => {}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg>
+              <ToolbarBtn title={t('rotate')} onClick={() => setRotation((r) => ((r + 90) % 360) as 0 | 90 | 180 | 270)} disabled={!imgSize}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 11-9-9"/><path d="M21 3v6h-6"/></svg>
               </ToolbarBtn>
               <ToolbarBtn title={t('exportTitle')} onClick={handleExport} disabled={exporting || !displayUrl}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
