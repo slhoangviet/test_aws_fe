@@ -1,5 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { editorStyles } from './editorStyles';
+import { InfoIcon } from './InfoIcon';
 
 type SliderControlProps = {
   label: string;
@@ -8,6 +9,7 @@ type SliderControlProps = {
   min?: number;
   max?: number;
   step?: number;
+  tooltip?: string;
 };
 
 export function SliderControl({
@@ -17,6 +19,7 @@ export function SliderControl({
   min = -1,
   max = 1,
   step = 0.01,
+  tooltip,
 }: SliderControlProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +63,10 @@ export function SliderControl({
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={editorStyles.sliderRow}>
-        <span style={editorStyles.sliderLabel}>{label}</span>
+        <span style={{ ...editorStyles.sliderLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {label}
+          {tooltip && <InfoIcon title={tooltip} />}
+        </span>
         <span style={editorStyles.sliderValue}>{Math.round(value * 100)}</span>
       </div>
       <input

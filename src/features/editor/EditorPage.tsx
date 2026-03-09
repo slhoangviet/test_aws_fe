@@ -5,6 +5,9 @@ import { useI18n } from '@/i18n';
 import { PixiEditorView } from './PixiEditorView';
 import { editorStyles } from './editorStyles';
 import { InfoIcon } from './InfoIcon';
+import { UploadDropzone } from './UploadDropzone';
+import { SliderControl } from './SliderControl';
+import { ToolbarBtn } from './ToolbarBtn';
 
 type SelectionMode = 'all' | 'import' | 'resize';
 
@@ -13,7 +16,6 @@ export default function EditorPage() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
 
   // Current file
   const [displayUrl, setDisplayUrl] = useState<string | null>(null);
@@ -70,26 +72,6 @@ export default function EditorPage() {
     const file = e.target.files?.[0];
     processFile(file ?? null);
     e.target.value = '';
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    processFile(file ?? null);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.types.includes('Files')) setDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(false);
   };
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -640,70 +622,10 @@ export default function EditorPage() {
               />
             </>
           ) : (
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: 0,
-                minHeight: 0,
-                width: '100%',
-                border: `2px dashed ${dragOver ? '#6366f1' : '#3f3f46'}`,
-                borderRadius: 12,
-                background: dragOver ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
-                color: dragOver ? '#a5b4fc' : '#71717a',
-                fontSize: 15,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                <div
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: '999px',
-                    border: `1px solid ${dragOver ? '#6366f1' : '#3f3f46'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: dragOver ? 'rgba(37, 99, 235, 0.18)' : 'rgba(24, 24, 27, 0.8)',
-                    boxShadow: dragOver ? '0 0 0 1px rgba(129, 140, 248, 0.6)' : '0 10px 30px rgba(0,0,0,0.6)',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <svg
-                    width="22"
-                    height="22"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M4 17a4 4 0 014-4h1" />
-                    <path d="M16 17h1a3 3 0 000-6 5 5 0 00-9.7-1.3" />
-                    <path d="M12 12v8" />
-                    <path d="M9.5 14.5L12 12l2.5 2.5" />
-                  </svg>
-                </div>
-                <div style={{ textAlign: 'center', maxWidth: 260 }}>
-                  <div style={{ fontWeight: 500 }}>{t('uploadDropzone')}</div>
-                  <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
-                    PNG, JPEG, WebP · tối đa vài chục MB
-                  </div>
-                </div>
-              </div>
-            </div>
+            <UploadDropzone
+              fileInputRef={fileInputRef}
+              onFileSelected={(file) => processFile(file)}
+            />
           )}
           {exportError && (
             <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#7f1d1d', color: '#fecaca', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
@@ -739,90 +661,6 @@ export default function EditorPage() {
         </main>
       </div>
     </>
-  );
-}
-function SliderControl({ label, value, onChange, min = -1, max = 1, step = 0.01, tooltip }: {
-  label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; tooltip?: string;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const updateFromPosition = useCallback((clientX: number) => {
-    const el = inputRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    let v = min + x * (max - min);
-    if (step > 0) v = Math.round(v / step) * step;
-    v = Math.max(min, Math.min(max, v));
-    onChange(v);
-  }, [min, max, step, onChange]);
-
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    (e.target as HTMLInputElement).setPointerCapture(e.pointerId);
-    updateFromPosition(e.clientX);
-  }, [updateFromPosition]);
-
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (e.buttons !== 1) return;
-    updateFromPosition(e.clientX);
-  }, [updateFromPosition]);
-
-  const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(Number(e.target.value));
-  }, [onChange]);
-
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={editorStyles.sliderRow}>
-        <span style={{ ...editorStyles.sliderLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
-          {label}
-          {tooltip && <InfoIcon title={tooltip} />}
-        </span>
-        <span style={editorStyles.sliderValue}>{Math.round(value * 100)}</span>
-      </div>
-      <input
-        ref={inputRef}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={handleInput}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        style={{ ...editorStyles.slider, width: '100%' }}
-      />
-    </div>
-  );
-}
-
-function ToolbarBtn({ title, onClick, disabled, children }: {
-  title: string; onClick: () => void; disabled?: boolean; children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        border: 'none',
-        background: 'transparent',
-        color: disabled ? '#52525b' : '#d4d4d8',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={(e) => { if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = '#3f3f46'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
-    >
-      {children}
-    </button>
   );
 }
 
