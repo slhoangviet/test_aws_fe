@@ -195,6 +195,16 @@ export default function EditorPage() {
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const cropContainerRef = useRef<HTMLDivElement>(null);
+  const qualitySliderRef = useRef<HTMLInputElement>(null);
+
+  const updateQualityFromPosition = useCallback((clientX: number) => {
+    const el = qualitySliderRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const v = Math.round(1 + x * 99);
+    setQuality(Math.max(1, Math.min(100, v)));
+  }, []);
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const dragRef = useRef<{ kind: string; startX: number; startY: number; left: number; top: number; w: number; h: number; scaleX: number; scaleY: number } | null>(null);
 
@@ -461,23 +471,55 @@ export default function EditorPage() {
 
   const SliderControl = ({ label, value, onChange, min = -1, max = 1, step = 0.01 }: {
     label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
-  }) => (
-    <div style={{ marginBottom: 8 }}>
-      <div style={styles.sliderRow}>
-        <span style={styles.sliderLabel}>{label}</span>
-        <span style={styles.sliderValue}>{Math.round(value * 100)}</span>
+  }) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const updateFromPosition = useCallback((clientX: number) => {
+      const el = inputRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      let v = min + x * (max - min);
+      if (step > 0) v = Math.round(v / step) * step;
+      v = Math.max(min, Math.min(max, v));
+      onChange(v);
+    }, [min, max, step, onChange]);
+
+    const onPointerDown = useCallback((e: React.PointerEvent) => {
+      (e.target as HTMLInputElement).setPointerCapture(e.pointerId);
+      updateFromPosition(e.clientX);
+    }, [updateFromPosition]);
+
+    const onPointerMove = useCallback((e: React.PointerEvent) => {
+      if (e.buttons !== 1) return;
+      updateFromPosition(e.clientX);
+    }, [updateFromPosition]);
+
+    const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(Number(e.target.value));
+    }, [onChange]);
+
+    return (
+      <div style={{ marginBottom: 8 }}>
+        <div style={styles.sliderRow}>
+          <span style={styles.sliderLabel}>{label}</span>
+          <span style={styles.sliderValue}>{Math.round(value * 100)}</span>
+        </div>
+        <input
+          ref={inputRef}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={handleInput}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          style={{ ...styles.slider, width: '100%' }}
+        />
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{ ...styles.slider, width: '100%' }}
-      />
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -585,7 +627,23 @@ export default function EditorPage() {
                 </div>
                 <div>
                   <label style={styles.label}>{t('quality')} {quality}%</label>
-                  <input type="range" min={1} max={100} value={quality} onChange={(e) => setQuality(Number(e.target.value))} style={{ ...styles.slider, width: '100%' }} />
+                  <input
+                    ref={qualitySliderRef}
+                    type="range"
+                    min={1}
+                    max={100}
+                    value={quality}
+                    onChange={(e) => setQuality(Number(e.target.value))}
+                    onPointerDown={(e) => {
+                      (e.target as HTMLInputElement).setPointerCapture(e.pointerId);
+                      updateQualityFromPosition(e.clientX);
+                    }}
+                    onPointerMove={(e) => {
+                      if (e.buttons !== 1) return;
+                      updateQualityFromPosition(e.clientX);
+                    }}
+                    style={{ ...styles.slider, width: '100%' }}
+                  />
                 </div>
                 <button type="button" onClick={handleExport} disabled={exporting || !displayUrl} style={styles.btn(true)}>
                   {exporting ? t('processing') : t('applyExport')}
@@ -594,7 +652,7 @@ export default function EditorPage() {
             </div>
           </aside>
         )}
-
+ 
         {/* Canvas / Preview */}
         <main style={styles.canvas}>
           {!leftPanelOpen && (
