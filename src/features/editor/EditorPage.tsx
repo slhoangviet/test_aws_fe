@@ -665,7 +665,44 @@ export default function EditorPage() {
                 transition: 'all 0.15s',
               }}
             >
-              {t('uploadDropzone')}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '999px',
+                    border: `1px solid ${dragOver ? '#6366f1' : '#3f3f46'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: dragOver ? 'rgba(37, 99, 235, 0.18)' : 'rgba(24, 24, 27, 0.8)',
+                    boxShadow: dragOver ? '0 0 0 1px rgba(129, 140, 248, 0.6)' : '0 10px 30px rgba(0,0,0,0.6)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M4 17a4 4 0 014-4h1" />
+                    <path d="M16 17h1a3 3 0 000-6 5 5 0 00-9.7-1.3" />
+                    <path d="M12 12v8" />
+                    <path d="M9.5 14.5L12 12l2.5 2.5" />
+                  </svg>
+                </div>
+                <div style={{ textAlign: 'center', maxWidth: 260 }}>
+                  <div style={{ fontWeight: 500 }}>{t('uploadDropzone')}</div>
+                  <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
+                    PNG, JPEG, WebP · tối đa vài chục MB
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           {exportError && (
@@ -704,7 +741,6 @@ export default function EditorPage() {
     </>
   );
 }
-
 function SliderControl({ label, value, onChange, min = -1, max = 1, step = 0.01, tooltip }: {
   label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; tooltip?: string;
 }) {
@@ -789,3 +825,4 @@ function ToolbarBtn({ title, onClick, disabled, children }: {
     </button>
   );
 }
+
