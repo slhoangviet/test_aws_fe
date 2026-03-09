@@ -58,6 +58,25 @@ export default function EditorPage() {
   const processFile = (file: File | null) => {
     if (!file || !file.type.startsWith('image/')) return;
     if (displayUrl) URL.revokeObjectURL(displayUrl);
+    // reset all state related to current image so ảnh mới luôn bắt đầu từ trạng thái sạch
+    setWidth('');
+    setHeight('');
+    setRotation(0);
+    setCropLeft('');
+    setCropTop('');
+    setCropW('');
+    setCropH('');
+    setCropMode(false);
+    setCropInitial(null);
+    setCropDisplaySize(null);
+    setBrightness(0);
+    setContrast(0);
+    setSaturation(0);
+    setTemperature(0);
+    setTintVal(0);
+    setHighlightsVal(0);
+    setShadowsVal(0);
+    setWhitesVal(0);
     setDisplayUrl(URL.createObjectURL(file));
     setFileName(file.name.replace(/\.[^.]+$/, ''));
     setExportError(null);
@@ -421,6 +440,41 @@ export default function EditorPage() {
               >
                 {t('autoAdjust')}
               </button>
+            </div>
+
+            {/* Current image / change */}
+            <div style={editorStyles.section}>
+              <div style={editorStyles.sectionTitle}>{t('currentImage')}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 12, color: '#a1a1aa' }}>
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={fileName}
+                >
+                  {fileName || '-'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: 6,
+                    border: '1px solid #3f3f46',
+                    background: 'transparent',
+                    color: '#e4e4e7',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {t('changeImage')}
+                </button>
+              </div>
             </div>
 
             {/* White Balance */}
