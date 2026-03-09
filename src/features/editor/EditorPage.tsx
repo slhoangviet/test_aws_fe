@@ -13,6 +13,7 @@ export default function EditorPage() {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   // Current file
   const [displayUrl, setDisplayUrl] = useState<string | null>(null);
@@ -55,15 +56,40 @@ export default function EditorPage() {
   const contrastMultiplier = 1 + contrast;
   const saturationMultiplier = 1 + saturation;
 
-  const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = (file: File | null) => {
     if (!file || !file.type.startsWith('image/')) return;
-    e.target.value = '';
-    // Revoke previous URL
     if (displayUrl) URL.revokeObjectURL(displayUrl);
     setDisplayUrl(URL.createObjectURL(file));
     setFileName(file.name.replace(/\.[^.]+$/, ''));
     setExportError(null);
+  };
+
+  const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    processFile(file ?? null);
+    e.target.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    processFile(file ?? null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
   };
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -357,23 +383,26 @@ export default function EditorPage() {
 
   return (
     <>
-      <div style={{ padding: '8px 16px', background: '#1c1c24', borderBottom: '1px solid #27272a', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <label style={{ cursor: 'pointer' }}>
-          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleOpenFile} />
-          <span style={editorStyles.btn(true)}>{t('openImage')}</span>
-        </label>
-        {imgSize && (
-          <span style={{ fontSize: 12, color: '#71717a' }}>
-            {imgSize.w} × {imgSize.h}px
-          </span>
-        )}
-      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleOpenFile}
+      />
       <div style={editorStyles.main}>
         {/* Left Panel - Adjustments */}
         {leftPanelOpen && (
           <aside style={editorStyles.leftPanel}>
             <div style={editorStyles.panelHeader}>
-              <span style={editorStyles.panelHeaderTitle}>{t('adjust')}</span>
+              <span style={editorStyles.panelHeaderTitle}>
+                {t('adjust')}
+                {imgSize && (
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#71717a', marginLeft: 8 }}>
+                    {imgSize.w} × {imgSize.h}px
+                  </span>
+                )}
+              </span>
               <button
                 type="button"
                 onClick={() => setLeftPanelOpen(false)}
@@ -611,8 +640,32 @@ export default function EditorPage() {
               />
             </>
           ) : (
-            <div style={{ textAlign: 'center', color: '#71717a', fontSize: 14 }}>
-              {t('canvasPlaceholder')} <strong>{t('canvasPlaceholderAction')}</strong> {t('canvasPlaceholderSuffix')}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 0,
+                minHeight: 0,
+                width: '100%',
+                border: `2px dashed ${dragOver ? '#6366f1' : '#3f3f46'}`,
+                borderRadius: 12,
+                background: dragOver ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                color: dragOver ? '#a5b4fc' : '#71717a',
+                fontSize: 15,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+            >
+              {t('uploadDropzone')}
             </div>
           )}
           {exportError && (
