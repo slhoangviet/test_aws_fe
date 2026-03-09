@@ -9,8 +9,6 @@ import { UploadDropzone } from './UploadDropzone';
 import { SliderControl } from './SliderControl';
 import { ToolbarBtn } from './ToolbarBtn';
 
-type SelectionMode = 'all' | 'import' | 'resize';
-
 export default function EditorPage() {
   const { t } = useI18n();
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
@@ -20,9 +18,6 @@ export default function EditorPage() {
   // Current file
   const [displayUrl, setDisplayUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('image');
-
-  // Selection mode
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>('all');
 
   // Size
   const [width, setWidth] = useState('');
@@ -392,22 +387,6 @@ export default function EditorPage() {
               >
                 ×
               </button>
-            </div>
-
-            {/* Selection mode tabs */}
-            <div style={editorStyles.section}>
-              <div style={{ ...editorStyles.sectionTitle, marginBottom: 8 }}>{t('selectRegion')}</div>
-              <div style={editorStyles.tabBar}>
-                <button type="button" style={editorStyles.tab(selectionMode === 'all')} onClick={() => setSelectionMode('all')}>
-                  {t('selAll')}
-                </button>
-                <button type="button" style={editorStyles.tab(selectionMode === 'import')} onClick={() => setSelectionMode('import')}>
-                  {t('selImport')}
-                </button>
-                <button type="button" style={editorStyles.tab(selectionMode === 'resize')} onClick={() => setSelectionMode('resize')}>
-                  {t('selResize')}
-                </button>
-              </div>
             </div>
 
             {/* Auto adjust */}
