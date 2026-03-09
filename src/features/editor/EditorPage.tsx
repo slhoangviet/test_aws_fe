@@ -3,137 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/i18n';
 import { PixiEditorView } from './PixiEditorView';
-
-const styles = {
-  main: {
-    flex: 1,
-    display: 'flex',
-    minHeight: 0,
-    overflow: 'hidden' as const,
-  },
-  leftPanel: {
-    width: 280,
-    minWidth: 280,
-    background: '#1c1c24',
-    borderRight: '1px solid #27272a',
-    padding: 0,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    overflowY: 'auto' as const,
-    height: '100%',
-  },
-  panelHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '12px 16px',
-    borderBottom: '1px solid #27272a',
-  },
-  panelHeaderTitle: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: '#e4e4e7',
-  },
-  section: {
-    padding: '12px 16px',
-    borderBottom: '1px solid #27272a',
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#a1a1aa',
-    marginBottom: 10,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-  },
-  canvas: {
-    flex: 1,
-    background: '#0c0c10',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    minHeight: 0,
-    position: 'relative' as const,
-    flexDirection: 'column' as const,
-  },
-  input: {
-    background: '#27272a',
-    border: '1px solid #3f3f46',
-    borderRadius: 6,
-    padding: '7px 10px',
-    color: '#fff',
-    fontSize: 13,
-    width: '100%',
-    boxSizing: 'border-box' as const,
-  },
-  label: { display: 'block', fontSize: 12, color: '#a1a1aa', marginBottom: 4 },
-  sliderRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 2,
-  },
-  sliderLabel: {
-    fontSize: 12,
-    color: '#a1a1aa',
-    flex: 1,
-    minWidth: 0,
-  },
-  sliderValue: {
-    fontSize: 12,
-    color: '#e4e4e7',
-    minWidth: 32,
-    textAlign: 'right' as const,
-    fontVariantNumeric: 'tabular-nums',
-  },
-  slider: {
-    flex: 1,
-    cursor: 'pointer',
-    outline: 'none',
-  },
-  btn: (primary: boolean) => ({
-    padding: '7px 16px',
-    borderRadius: 6,
-    border: 'none',
-    background: primary ? '#6366f1' : '#27272a',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'background 0.15s',
-  }),
-  btnOutline: {
-    padding: '7px 16px',
-    borderRadius: 6,
-    border: '1px solid #3f3f46',
-    background: 'transparent',
-    color: '#a1a1aa',
-    fontSize: 12,
-    cursor: 'pointer',
-    width: '100%',
-  },
-  tabBar: {
-    display: 'flex',
-    gap: 2,
-    background: '#27272a',
-    borderRadius: 8,
-    padding: 2,
-  },
-  tab: (active: boolean) => ({
-    flex: 1,
-    padding: '6px 12px',
-    borderRadius: 6,
-    border: 'none',
-    background: active ? '#6366f1' : 'transparent',
-    color: active ? '#fff' : '#71717a',
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  }),
-};
+import { editorStyles } from './editorStyles';
 
 type SelectionMode = 'all' | 'import' | 'resize';
 
@@ -484,64 +354,12 @@ export default function EditorPage() {
     };
   }, [imgSize]);
 
-  const SliderControl = ({ label, value, onChange, min = -1, max = 1, step = 0.01 }: {
-    label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
-  }) => {
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const updateFromPosition = useCallback((clientX: number) => {
-      const el = inputRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      let v = min + x * (max - min);
-      if (step > 0) v = Math.round(v / step) * step;
-      v = Math.max(min, Math.min(max, v));
-      onChange(v);
-    }, [min, max, step, onChange]);
-
-    const onPointerDown = useCallback((e: React.PointerEvent) => {
-      (e.target as HTMLInputElement).setPointerCapture(e.pointerId);
-      updateFromPosition(e.clientX);
-    }, [updateFromPosition]);
-
-    const onPointerMove = useCallback((e: React.PointerEvent) => {
-      if (e.buttons !== 1) return;
-      updateFromPosition(e.clientX);
-    }, [updateFromPosition]);
-
-    const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(Number(e.target.value));
-    }, [onChange]);
-
-    return (
-      <div style={{ marginBottom: 8 }}>
-        <div style={styles.sliderRow}>
-          <span style={styles.sliderLabel}>{label}</span>
-          <span style={styles.sliderValue}>{Math.round(value * 100)}</span>
-        </div>
-        <input
-          ref={inputRef}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={handleInput}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          style={{ ...styles.slider, width: '100%' }}
-        />
-      </div>
-    );
-  };
-
   return (
     <>
       <div style={{ padding: '8px 16px', background: '#1c1c24', borderBottom: '1px solid #27272a', display: 'flex', alignItems: 'center', gap: 12 }}>
         <label style={{ cursor: 'pointer' }}>
           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleOpenFile} />
-          <span style={styles.btn(true)}>{t('openImage')}</span>
+          <span style={editorStyles.btn(true)}>{t('openImage')}</span>
         </label>
         {imgSize && (
           <span style={{ fontSize: 12, color: '#71717a' }}>
@@ -549,12 +367,12 @@ export default function EditorPage() {
           </span>
         )}
       </div>
-      <div style={styles.main}>
+      <div style={editorStyles.main}>
         {/* Left Panel - Adjustments */}
         {leftPanelOpen && (
-          <aside style={styles.leftPanel}>
-            <div style={styles.panelHeader}>
-              <span style={styles.panelHeaderTitle}>{t('adjust')}</span>
+          <aside style={editorStyles.leftPanel}>
+            <div style={editorStyles.panelHeader}>
+              <span style={editorStyles.panelHeaderTitle}>{t('adjust')}</span>
               <button
                 type="button"
                 onClick={() => setLeftPanelOpen(false)}
@@ -565,23 +383,23 @@ export default function EditorPage() {
             </div>
 
             {/* Selection mode tabs */}
-            <div style={styles.section}>
-              <div style={{ ...styles.sectionTitle, marginBottom: 8 }}>{t('selectRegion')}</div>
-              <div style={styles.tabBar}>
-                <button type="button" style={styles.tab(selectionMode === 'all')} onClick={() => setSelectionMode('all')}>
+            <div style={editorStyles.section}>
+              <div style={{ ...editorStyles.sectionTitle, marginBottom: 8 }}>{t('selectRegion')}</div>
+              <div style={editorStyles.tabBar}>
+                <button type="button" style={editorStyles.tab(selectionMode === 'all')} onClick={() => setSelectionMode('all')}>
                   {t('selAll')}
                 </button>
-                <button type="button" style={styles.tab(selectionMode === 'import')} onClick={() => setSelectionMode('import')}>
+                <button type="button" style={editorStyles.tab(selectionMode === 'import')} onClick={() => setSelectionMode('import')}>
                   {t('selImport')}
                 </button>
-                <button type="button" style={styles.tab(selectionMode === 'resize')} onClick={() => setSelectionMode('resize')}>
+                <button type="button" style={editorStyles.tab(selectionMode === 'resize')} onClick={() => setSelectionMode('resize')}>
                   {t('selResize')}
                 </button>
               </div>
             </div>
 
             {/* Auto adjust */}
-            <div style={styles.section}>
+            <div style={editorStyles.section}>
               <button
                 type="button"
                 onClick={autoAdjust}
@@ -604,15 +422,15 @@ export default function EditorPage() {
             </div>
 
             {/* White Balance */}
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>{t('whiteBalance')}</div>
+            <div style={editorStyles.section}>
+              <div style={editorStyles.sectionTitle}>{t('whiteBalance')}</div>
               <SliderControl label={t('temperature')} value={temperature} onChange={setTemperature} />
               <SliderControl label={t('tint')} value={tintVal} onChange={setTintVal} />
             </div>
 
             {/* Light */}
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>{t('light')}</div>
+            <div style={editorStyles.section}>
+              <div style={editorStyles.sectionTitle}>{t('light')}</div>
               <SliderControl label={t('brightness')} value={brightness} onChange={setBrightness} />
               <SliderControl label={t('contrast')} value={contrast} onChange={setContrast} />
               <SliderControl label={t('highlights')} value={highlightsVal} onChange={setHighlightsVal} />
@@ -622,26 +440,26 @@ export default function EditorPage() {
             </div>
 
             {/* Reset */}
-            <div style={styles.section}>
-              <button type="button" onClick={resetAdjustments} style={styles.btnOutline}>
+            <div style={editorStyles.section}>
+              <button type="button" onClick={resetAdjustments} style={editorStyles.btnOutline}>
                 {t('resetAdjustments')}
               </button>
             </div>
 
             {/* Export */}
-            <div style={styles.section}>
-              <div style={styles.sectionTitle}>{t('exportTitle')}</div>
+            <div style={editorStyles.section}>
+              <div style={editorStyles.sectionTitle}>{t('exportTitle')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div>
-                  <label style={styles.label}>{t('format')}</label>
-                  <select value={format} onChange={(e) => setFormat(e.target.value as 'webp' | 'jpeg' | 'png')} style={styles.input}>
+                  <label style={editorStyles.label}>{t('format')}</label>
+                  <select value={format} onChange={(e) => setFormat(e.target.value as 'webp' | 'jpeg' | 'png')} style={editorStyles.input}>
                     <option value="webp">WebP</option>
                     <option value="jpeg">JPEG</option>
                     <option value="png">PNG</option>
                   </select>
                 </div>
                 <div>
-                  <label style={styles.label}>{t('quality')} {quality}%</label>
+                  <label style={editorStyles.label}>{t('quality')} {quality}%</label>
                   <input
                     ref={qualitySliderRef}
                     type="range"
@@ -657,10 +475,10 @@ export default function EditorPage() {
                       if (e.buttons !== 1) return;
                       updateQualityFromPosition(e.clientX);
                     }}
-                    style={{ ...styles.slider, width: '100%' }}
+                    style={{ ...editorStyles.slider, width: '100%' }}
                   />
                 </div>
-                <button type="button" onClick={handleExport} disabled={exporting || !displayUrl} style={styles.btn(true)}>
+                <button type="button" onClick={handleExport} disabled={exporting || !displayUrl} style={editorStyles.btn(true)}>
                   {exporting ? t('processing') : t('applyExport')}
                 </button>
               </div>
@@ -669,7 +487,7 @@ export default function EditorPage() {
         )}
  
         {/* Canvas / Preview */}
-        <main style={styles.canvas}>
+        <main style={editorStyles.canvas}>
           {!leftPanelOpen && (
             <button
               type="button"
@@ -679,7 +497,7 @@ export default function EditorPage() {
                 top: 8,
                 left: 8,
                 zIndex: 10,
-                ...styles.btn(false),
+                ...editorStyles.btn(false),
                 fontSize: 12,
                 padding: '5px 10px',
               }}
@@ -757,8 +575,8 @@ export default function EditorPage() {
                             }}
                           />
                           <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 12, zIndex: 20 }}>
-                            <button type="button" onClick={applyCrop} style={styles.btn(true)}>Apply</button>
-                            <button type="button" onClick={cancelCrop} style={styles.btn(false)}>Cancel</button>
+                            <button type="button" onClick={applyCrop} style={editorStyles.btn(true)}>Apply</button>
+                            <button type="button" onClick={cancelCrop} style={editorStyles.btn(false)}>Cancel</button>
                           </div>
                         </div>
                       );
@@ -827,6 +645,58 @@ export default function EditorPage() {
         </main>
       </div>
     </>
+  );
+}
+
+function SliderControl({ label, value, onChange, min = -1, max = 1, step = 0.01 }: {
+  label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const updateFromPosition = useCallback((clientX: number) => {
+    const el = inputRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    let v = min + x * (max - min);
+    if (step > 0) v = Math.round(v / step) * step;
+    v = Math.max(min, Math.min(max, v));
+    onChange(v);
+  }, [min, max, step, onChange]);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    (e.target as HTMLInputElement).setPointerCapture(e.pointerId);
+    updateFromPosition(e.clientX);
+  }, [updateFromPosition]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (e.buttons !== 1) return;
+    updateFromPosition(e.clientX);
+  }, [updateFromPosition]);
+
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(Number(e.target.value));
+  }, [onChange]);
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={editorStyles.sliderRow}>
+        <span style={editorStyles.sliderLabel}>{label}</span>
+        <span style={editorStyles.sliderValue}>{Math.round(value * 100)}</span>
+      </div>
+      <input
+        ref={inputRef}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={handleInput}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        style={{ ...editorStyles.slider, width: '100%' }}
+      />
+    </div>
   );
 }
 
