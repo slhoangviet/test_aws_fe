@@ -2,13 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/i18n';
-import { apiFetch, getApiBase } from '@/utils/api';
 import { PixiEditorView } from './PixiEditorView';
-
-const fullUrl = (path: string) => {
-  const base = getApiBase();
-  return path.startsWith('http') ? path : (base ? `${base}${path}` : path);
-};
 
 const styles = {
   main: {
@@ -64,15 +58,6 @@ const styles = {
     position: 'relative' as const,
     flexDirection: 'column' as const,
   },
-  rightPanel: {
-    width: 280,
-    minWidth: 280,
-    background: '#1c1c24',
-    borderLeft: '1px solid #27272a',
-    padding: 12,
-    overflowY: 'auto' as const,
-    height: '100%',
-  },
   input: {
     background: '#27272a',
     border: '1px solid #3f3f46',
@@ -108,14 +93,6 @@ const styles = {
     cursor: 'pointer',
     outline: 'none',
   },
-  thumbCard: {
-    background: '#27272a',
-    borderRadius: 8,
-    overflow: 'hidden',
-    border: '2px solid transparent',
-    cursor: 'pointer',
-  },
-  thumbCardActive: { border: '2px solid #6366f1' },
   btn: (primary: boolean) => ({
     padding: '7px 16px',
     borderRadius: 6,
@@ -156,31 +133,19 @@ const styles = {
     cursor: 'pointer',
     transition: 'all 0.15s',
   }),
-  panelTitle: { fontSize: 11, fontWeight: 600, color: '#71717a', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 4 },
-};
-
-type FileItem = {
-  id: number;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  s3Key: string;
-  s3Url: string;
-  createdAt: string;
 };
 
 type SelectionMode = 'all' | 'import' | 'resize';
 
 export default function EditorPage() {
-  const { t, locale } = useI18n();
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [processResult, setProcessResult] = useState<string | null>(null);
-  const [processLoading, setProcessLoading] = useState(false);
-  const [processError, setProcessError] = useState<string | null>(null);
+  const { t } = useI18n();
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // Current file
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string>('image');
 
   // Selection mode
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('all');
@@ -217,91 +182,16 @@ export default function EditorPage() {
   const contrastMultiplier = 1 + contrast;
   const saturationMultiplier = 1 + saturation;
 
-  const fetchFiles = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await apiFetch('/files', { locale });
-      if (!res.ok) throw new Error('Load failed');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.items)) setFiles(data.items);
-    } catch {
-      setFiles([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [locale]);
-
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
     e.target.value = '';
-    setUploading(true);
-    setProcessError(null);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await apiFetch('/upload', { method: 'POST', body: formData, locale });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || t('errorUpload'));
-      if (data.success && data.file) {
-        setFiles((prev) => [data.file, ...prev]);
-        setSelectedId(data.file.id);
-        setProcessResult(null);
-      }
-    } catch (err) {
-      setProcessError(err instanceof Error ? err.message : t('errorUpload'));
-    } finally {
-      setUploading(false);
-    }
+    // Revoke previous URL
+    if (displayUrl) URL.revokeObjectURL(displayUrl);
+    setDisplayUrl(URL.createObjectURL(file));
+    setFileName(file.name.replace(/\.[^.]+$/, ''));
+    setExportError(null);
   };
-
-  const handleProcess = async () => {
-    if (selectedId == null) return;
-    setProcessLoading(true);
-    setProcessError(null);
-    setProcessResult(null);
-    try {
-      const body: Record<string, unknown> = {
-        format,
-        quality,
-        brightness: brightnessMultiplier !== 1 ? brightnessMultiplier : undefined,
-        contrast: contrastMultiplier !== 1 ? contrastMultiplier : undefined,
-        saturation: saturationMultiplier !== 1 ? saturationMultiplier : undefined,
-      };
-      const w = width.trim() ? parseInt(width, 10) : undefined;
-      const h = height.trim() ? parseInt(height, 10) : undefined;
-      if (w && !Number.isNaN(w)) body.width = w;
-      if (h && !Number.isNaN(h)) body.height = h;
-      const cl = cropLeft.trim() ? parseInt(cropLeft, 10) : undefined;
-      const ct = cropTop.trim() ? parseInt(cropTop, 10) : undefined;
-      const cw = cropW.trim() ? parseInt(cropW, 10) : undefined;
-      const ch = cropH.trim() ? parseInt(cropH, 10) : undefined;
-      if (cl != null && ct != null && cw != null && ch != null && !Number.isNaN(cl) && !Number.isNaN(ct) && !Number.isNaN(cw) && !Number.isNaN(ch)) {
-        body.crop = { left: cl, top: ct, width: cw, height: ch };
-      }
-      const res = await apiFetch(`/files/${selectedId}/process`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        locale,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || t('errorProcess'));
-      if (data.url) setProcessResult(data.url);
-      else throw new Error('No URL');
-    } catch (err) {
-      setProcessError(err instanceof Error ? err.message : t('errorProcess'));
-    } finally {
-      setProcessLoading(false);
-    }
-  };
-
-  const selectedFile = files.find((f) => f.id === selectedId);
-  const displayUrl = processResult ? fullUrl(processResult) : selectedFile ? fullUrl(selectedFile.s3Url) : null;
 
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const cropContainerRef = useRef<HTMLDivElement>(null);
@@ -313,26 +203,9 @@ export default function EditorPage() {
     if (!displayUrl) setImgSize(null);
   }, [displayUrl]);
 
-  // Callback from PixiEditorView when it detects image dimensions
   const handleImgSizeDetected = useCallback((w: number, h: number) => {
     setImgSize({ w, h });
   }, []);
-
-  const deleteFile = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      const res = await apiFetch(`/files/${id}`, { method: 'DELETE', locale });
-      if (!res.ok) throw new Error('Delete failed');
-      const next = files.filter((f) => f.id !== id);
-      setFiles(next);
-      if (selectedId === id) {
-        setSelectedId(next.length ? next[0].id : null);
-        setProcessResult(null);
-      }
-    } catch {
-      setProcessError(t('errorDelete'));
-    }
-  };
 
   const getCropNumbers = useCallback(() => {
     if (!imgSize) return null;
@@ -396,6 +269,108 @@ export default function EditorPage() {
     setSaturation(0.1);
     setHighlightsVal(-0.1);
     setShadowsVal(0.15);
+  };
+
+  // Client-side export: render to offscreen canvas, then download
+  const handleExport = async () => {
+    if (!displayUrl || !imgSize) return;
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = displayUrl;
+      });
+
+      const crop = getCropNumbers() ?? { left: 0, top: 0, w: imgSize.w, h: imgSize.h };
+      let destW = crop.w;
+      let destH = crop.h;
+      const outW = width.trim() ? parseInt(width, 10) : undefined;
+      const outH = height.trim() ? parseInt(height, 10) : undefined;
+      if (outW && outW > 0 && outH && outH > 0) {
+        destW = outW; destH = outH;
+      } else if (outW && outW > 0) {
+        destW = outW; destH = Math.round((outW * crop.h) / crop.w);
+      } else if (outH && outH > 0) {
+        destH = outH; destW = Math.round((outH * crop.w) / crop.h);
+      }
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = destW;
+      offscreen.height = destH;
+      const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+      if (!ctx) throw new Error('Canvas context unavailable');
+
+      const bm = 1 + brightness;
+      const cm = 1 + contrast;
+      const sm = 1 + saturation;
+      ctx.filter = `brightness(${bm}) contrast(${cm}) saturate(${sm})`;
+      ctx.drawImage(img, crop.left, crop.top, crop.w, crop.h, 0, 0, destW, destH);
+      ctx.filter = 'none';
+
+      if (temperature !== 0) {
+        ctx.globalCompositeOperation = 'overlay';
+        const tempAlpha = Math.abs(temperature) * 0.15;
+        ctx.fillStyle = temperature > 0
+          ? `rgba(255, 140, 0, ${tempAlpha})`
+          : `rgba(0, 100, 255, ${tempAlpha})`;
+        ctx.fillRect(0, 0, destW, destH);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      if (tintVal !== 0) {
+        ctx.globalCompositeOperation = 'overlay';
+        const tintAlpha = Math.abs(tintVal) * 0.12;
+        ctx.fillStyle = tintVal > 0
+          ? `rgba(200, 50, 200, ${tintAlpha})`
+          : `rgba(50, 200, 50, ${tintAlpha})`;
+        ctx.fillRect(0, 0, destW, destH);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      if (highlightsVal !== 0 || shadowsVal !== 0 || whitesVal !== 0) {
+        const imageData = ctx.getImageData(0, 0, destW, destH);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          const lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+          let adj = 0;
+          if (highlightsVal !== 0 && lum > 0.6) adj += highlightsVal * (lum - 0.6) * 2.5 * 40;
+          if (shadowsVal !== 0 && lum < 0.4) adj += shadowsVal * (0.4 - lum) * 2.5 * 40;
+          if (whitesVal !== 0 && lum > 0.8) adj += whitesVal * (lum - 0.8) * 5 * 40;
+          if (adj !== 0) {
+            data[i] = Math.max(0, Math.min(255, r + adj));
+            data[i + 1] = Math.max(0, Math.min(255, g + adj));
+            data[i + 2] = Math.max(0, Math.min(255, b + adj));
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+      }
+
+      const mimeType = format === 'png' ? 'image/png' : format === 'jpeg' ? 'image/jpeg' : 'image/webp';
+      const q = format === 'png' ? undefined : quality / 100;
+
+      const blob = await new Promise<Blob | null>((resolve) => offscreen.toBlob(resolve, mimeType, q));
+      if (!blob) throw new Error('Failed to create image blob');
+
+      const ext = format === 'jpeg' ? 'jpg' : format;
+      const downloadName = `${fileName}_edited.${ext}`;
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = downloadName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : t('errorProcess'));
+    } finally {
+      setExporting(false);
+    }
   };
 
   const HANDLE = 10;
@@ -508,8 +483,8 @@ export default function EditorPage() {
     <>
       <div style={{ padding: '8px 16px', background: '#1c1c24', borderBottom: '1px solid #27272a', display: 'flex', alignItems: 'center', gap: 12 }}>
         <label style={{ cursor: 'pointer' }}>
-          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
-          <span style={styles.btn(true)}>{uploading ? t('uploading') : t('openImage')}</span>
+          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleOpenFile} />
+          <span style={styles.btn(true)}>{t('openImage')}</span>
         </label>
         {imgSize && (
           <span style={{ fontSize: 12, color: '#71717a' }}>
@@ -612,8 +587,8 @@ export default function EditorPage() {
                   <label style={styles.label}>{t('quality')} {quality}%</label>
                   <input type="range" min={1} max={100} value={quality} onChange={(e) => setQuality(Number(e.target.value))} style={{ ...styles.slider, width: '100%' }} />
                 </div>
-                <button type="button" onClick={handleProcess} disabled={processLoading || selectedId == null} style={styles.btn(true)}>
-                  {processLoading ? t('processing') : t('applyExport')}
+                <button type="button" onClick={handleExport} disabled={exporting || !displayUrl} style={styles.btn(true)}>
+                  {exporting ? t('processing') : t('applyExport')}
                 </button>
               </div>
             </div>
@@ -744,9 +719,9 @@ export default function EditorPage() {
               {t('canvasPlaceholder')} <strong>{t('canvasPlaceholderAction')}</strong> {t('canvasPlaceholderSuffix')}
             </div>
           )}
-          {processError && (
+          {exportError && (
             <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#7f1d1d', color: '#fecaca', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
-              {processError}
+              {exportError}
             </div>
           )}
 
@@ -770,54 +745,12 @@ export default function EditorPage() {
               <ToolbarBtn title={t('size')} onClick={() => {}}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg>
               </ToolbarBtn>
-              <ToolbarBtn title={t('exportTitle')} onClick={handleProcess} disabled={processLoading || selectedId == null}>
+              <ToolbarBtn title={t('exportTitle')} onClick={handleExport} disabled={exporting || !displayUrl}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
               </ToolbarBtn>
             </div>
           )}
         </main>
-
-        {/* Right Panel - Library */}
-        <aside style={styles.rightPanel}>
-          <div style={styles.panelTitle}>{t('library')}</div>
-          {loading ? (
-            <div style={{ color: '#71717a', fontSize: 13 }}>{t('libraryLoading')}</div>
-          ) : files.length === 0 ? (
-            <div style={{ color: '#71717a', fontSize: 13 }}>{t('libraryEmpty')}</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {files.map((item) => (
-                <div
-                  key={item.id}
-                  style={{ ...styles.thumbCard, ...(selectedId === item.id ? styles.thumbCardActive : {}) }}
-                  onClick={() => { setSelectedId(item.id); setProcessResult(null); setProcessError(null); }}
-                >
-                  <div style={{ aspectRatio: '16/10', position: 'relative' as const, background: '#0c0c10' }}>
-                    <img src={fullUrl(item.s3Url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <button
-                      type="button"
-                      onClick={(e) => deleteFile(item.id, e)}
-                      style={{
-                        position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 4, border: 'none',
-                        background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 14, cursor: 'pointer', lineHeight: 1, padding: 0,
-                      }}
-                      title={t('delete')}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div style={{ padding: '6px 8px', fontSize: 11, color: '#a1a1aa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.originalName}</div>
-                </div>
-              ))}
-            </div>
-          )}
-          {processResult && (
-            <div style={{ marginTop: 12 }}>
-              <div style={styles.panelTitle}>{t('result')}</div>
-              <a href={fullUrl(processResult)} download target="_blank" rel="noreferrer" style={{ ...styles.btn(true), display: 'inline-block', textDecoration: 'none', marginTop: 4 }}>{t('download')}</a>
-            </div>
-          )}
-        </aside>
       </div>
     </>
   );
