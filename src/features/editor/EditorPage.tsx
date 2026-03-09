@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/i18n';
 import { PixiEditorView } from './PixiEditorView';
 import { editorStyles } from './editorStyles';
+import { InfoIcon } from './InfoIcon';
 
 type SelectionMode = 'all' | 'import' | 'resize';
 
@@ -424,19 +425,19 @@ export default function EditorPage() {
             {/* White Balance */}
             <div style={editorStyles.section}>
               <div style={editorStyles.sectionTitle}>{t('whiteBalance')}</div>
-              <SliderControl label={t('temperature')} value={temperature} onChange={setTemperature} />
-              <SliderControl label={t('tint')} value={tintVal} onChange={setTintVal} />
+              <SliderControl label={t('temperature')} value={temperature} onChange={setTemperature} tooltip={t('tooltipTemperature')} />
+              <SliderControl label={t('tint')} value={tintVal} onChange={setTintVal} tooltip={t('tooltipTint')} />
             </div>
 
             {/* Light */}
             <div style={editorStyles.section}>
               <div style={editorStyles.sectionTitle}>{t('light')}</div>
-              <SliderControl label={t('brightness')} value={brightness} onChange={setBrightness} />
-              <SliderControl label={t('contrast')} value={contrast} onChange={setContrast} />
-              <SliderControl label={t('highlights')} value={highlightsVal} onChange={setHighlightsVal} />
-              <SliderControl label={t('shadowsLabel')} value={shadowsVal} onChange={setShadowsVal} />
-              <SliderControl label={t('whitesLabel')} value={whitesVal} onChange={setWhitesVal} />
-              <SliderControl label={t('saturation')} value={saturation} onChange={setSaturation} />
+              <SliderControl label={t('brightness')} value={brightness} onChange={setBrightness} tooltip={t('tooltipBrightness')} />
+              <SliderControl label={t('contrast')} value={contrast} onChange={setContrast} tooltip={t('tooltipContrast')} />
+              <SliderControl label={t('highlights')} value={highlightsVal} onChange={setHighlightsVal} tooltip={t('tooltipHighlights')} />
+              <SliderControl label={t('shadowsLabel')} value={shadowsVal} onChange={setShadowsVal} tooltip={t('tooltipShadows')} />
+              <SliderControl label={t('whitesLabel')} value={whitesVal} onChange={setWhitesVal} tooltip={t('tooltipWhites')} />
+              <SliderControl label={t('saturation')} value={saturation} onChange={setSaturation} tooltip={t('tooltipSaturation')} />
             </div>
 
             {/* Reset */}
@@ -459,7 +460,10 @@ export default function EditorPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={editorStyles.label}>{t('quality')} {quality}%</label>
+                  <label style={{ ...editorStyles.label, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {t('quality')} {quality}%
+                    <InfoIcon title={t('tooltipQuality')} />
+                  </label>
                   <input
                     ref={qualitySliderRef}
                     type="range"
@@ -648,8 +652,8 @@ export default function EditorPage() {
   );
 }
 
-function SliderControl({ label, value, onChange, min = -1, max = 1, step = 0.01 }: {
-  label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number;
+function SliderControl({ label, value, onChange, min = -1, max = 1, step = 0.01, tooltip }: {
+  label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; tooltip?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -681,7 +685,10 @@ function SliderControl({ label, value, onChange, min = -1, max = 1, step = 0.01 
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={editorStyles.sliderRow}>
-        <span style={editorStyles.sliderLabel}>{label}</span>
+        <span style={{ ...editorStyles.sliderLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {label}
+          {tooltip && <InfoIcon title={tooltip} />}
+        </span>
         <span style={editorStyles.sliderValue}>{Math.round(value * 100)}</span>
       </div>
       <input
