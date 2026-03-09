@@ -6,6 +6,7 @@ Web xử lý ảnh: upload, resize, crop, điều chỉnh độ sáng/tương ph
 
 - **Next.js 15** (App Router) — SSR, file-based routing, metadata cho SEO
 - **React 18**, TypeScript
+- **PixiJS** — preview ảnh trong editor (sprite, ColorMatrixFilter, crop overlay). Backend dùng **Sharp** để xử lý ảnh (resize, crop, format, chất lượng).
 - **Đa ngôn ngữ:** client-side (VI/EN), header `x-locale` gửi sang BE
 
 ## Scripts

@@ -12,3 +12,103 @@ body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   color: #e4e4e7;
 }
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+
+/* ── Range slider ── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  touch-action: none; /* Cho phép kéo giữ mượt trên touch */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+/* Track - Chromium */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: #3f3f46;
+  border-radius: 2px;
+  border: none;
+}
+
+/* Track - Firefox */
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: #3f3f46;
+  border-radius: 2px;
+  border: none;
+}
+
+/* Thumb - Chromium */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a1a1aa;
+  border: none;
+  margin-top: -4px;
+  pointer-events: auto;
+  transition: background 0.15s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #d4d4d8;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  background: #e4e4e7;
+}
+
+/* Thumb - Firefox */
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #a1a1aa;
+  border: none;
+  pointer-events: auto;
+  transition: background 0.15s;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #d4d4d8;
+}
+
+input[type="range"]::-moz-range-thumb:active {
+  background: #e4e4e7;
+}

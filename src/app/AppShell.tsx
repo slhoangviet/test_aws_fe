@@ -6,11 +6,12 @@ import { Header } from '@/components/layout';
 const styles = {
   layout: {
     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-    minHeight: '100vh',
+    height: '100vh',
     background: '#14141a',
     color: '#e4e4e7',
     display: 'flex',
     flexDirection: 'column' as const,
+    overflow: 'hidden' as const,
   },
   content: {
     flex: 1,
