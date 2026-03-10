@@ -14,28 +14,13 @@ export function ToolbarBtn({ title, onClick, disabled, children }: ToolbarBtnPro
       title={title}
       onClick={onClick}
       disabled={disabled}
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        border: 'none',
-        background: 'transparent',
-        color: disabled ? '#52525b' : '#d4d4d8',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) (e.currentTarget as HTMLButtonElement).style.background = '#3f3f46';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-      }}
+      className={`w-9 h-9 rounded-lg border-none bg-transparent flex items-center justify-center transition-colors duration-150 ${
+        disabled
+          ? 'text-zinc-600 cursor-not-allowed'
+          : 'text-zinc-300 cursor-pointer hover:bg-zinc-700'
+      }`}
     >
       {children}
     </button>
   );
 }
-

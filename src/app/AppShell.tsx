@@ -3,29 +3,11 @@
 import React from 'react';
 import { Header } from '@/components/layout';
 
-const styles = {
-  layout: {
-    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-    height: '100vh',
-    background: '#14141a',
-    color: '#e4e4e7',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    overflow: 'hidden' as const,
-  },
-  content: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    minHeight: 0,
-  },
-};
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={styles.layout}>
+    <div className="font-['Inter','Segoe_UI',system-ui,sans-serif] h-screen bg-app-bg text-zinc-200 flex flex-col overflow-hidden">
       <Header />
-      <main style={styles.content}>{children}</main>
+      <main className="flex-1 flex flex-col min-h-0">{children}</main>
     </div>
   );
 }

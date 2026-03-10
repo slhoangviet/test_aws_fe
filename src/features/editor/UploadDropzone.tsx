@@ -45,37 +45,19 @@ export function UploadDropzone({ fileInputRef, onFileSelected }: UploadDropzoneP
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 0,
-        minHeight: 0,
-        width: '100%',
-        border: `2px dashed ${dragOver ? '#6366f1' : '#3f3f46'}`,
-        borderRadius: 12,
-        background: dragOver ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
-        color: dragOver ? '#a5b4fc' : '#71717a',
-        fontSize: 15,
-        cursor: 'pointer',
-        transition: 'all 0.15s',
-      }}
+      className={`flex-1 flex items-center justify-center min-w-0 min-h-0 w-full border-2 border-dashed rounded-xl cursor-pointer transition-all duration-150 text-[15px] ${
+        dragOver
+          ? 'border-indigo-500 bg-indigo-500/[0.08] text-indigo-300'
+          : 'border-zinc-700 bg-transparent text-zinc-500'
+      }`}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      <div className="flex flex-col items-center gap-2.5">
         <div
-          style={{
-            width: 52,
-            height: 52,
-            borderRadius: '999px',
-            border: `1px solid ${dragOver ? '#6366f1' : '#3f3f46'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: dragOver ? 'rgba(37, 99, 235, 0.18)' : 'rgba(24, 24, 27, 0.8)',
-            boxShadow: dragOver ? '0 0 0 1px rgba(129, 140, 248, 0.6)' : '0 10px 30px rgba(0,0,0,0.6)',
-            transition: 'all 0.15s',
-          }}
+          className={`w-[52px] h-[52px] rounded-full flex items-center justify-center transition-all duration-150 ${
+            dragOver
+              ? 'border border-indigo-500 bg-blue-600/[0.18] shadow-[0_0_0_1px_rgba(129,140,248,0.6)]'
+              : 'border border-zinc-700 bg-zinc-900/80 shadow-[0_10px_30px_rgba(0,0,0,0.6)]'
+          }`}
         >
           <svg
             width="22"
@@ -93,9 +75,9 @@ export function UploadDropzone({ fileInputRef, onFileSelected }: UploadDropzoneP
             <path d="M9.5 14.5L12 12l2.5 2.5" />
           </svg>
         </div>
-        <div style={{ textAlign: 'center', maxWidth: 260 }}>
-          <div style={{ fontWeight: 500 }}>{t('uploadDropzone')}</div>
-          <div style={{ fontSize: 12, marginTop: 4, opacity: 0.8 }}>
+        <div className="text-center max-w-[260px]">
+          <div className="font-medium">{t('uploadDropzone')}</div>
+          <div className="text-xs mt-1 opacity-80">
             PNG, JPEG, WebP · tối đa vài chục MB
           </div>
         </div>
@@ -103,4 +85,3 @@ export function UploadDropzone({ fileInputRef, onFileSelected }: UploadDropzoneP
     </div>
   );
 }
-

@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useI18n } from '@/i18n';
 import { PixiEditorView } from './PixiEditorView';
-import { editorStyles } from './editorStyles';
 import { InfoIcon } from './InfoIcon';
 import { UploadDropzone } from './UploadDropzone';
 import { SliderControl } from './SliderControl';
@@ -58,7 +57,6 @@ export default function EditorPage() {
   const processFile = (file: File | null) => {
     if (!file || !file.type.startsWith('image/')) return;
     if (displayUrl) URL.revokeObjectURL(displayUrl);
-    // reset all state related to current image so ảnh mới luôn bắt đầu từ trạng thái sạch
     setWidth('');
     setHeight('');
     setRotation(0);
@@ -103,7 +101,6 @@ export default function EditorPage() {
   const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const dragRef = useRef<{ kind: string; startX: number; startY: number; left: number; top: number; w: number; h: number; scaleX: number; scaleY: number } | null>(null);
 
-  // Reset imgSize when URL changes
   useEffect(() => {
     if (!displayUrl) setImgSize(null);
   }, [displayUrl]);
@@ -176,7 +173,6 @@ export default function EditorPage() {
     setShadowsVal(0.15);
   };
 
-  // Client-side export: render to offscreen canvas, then download
   const handleExport = async () => {
     if (!displayUrl || !imgSize) return;
     setExporting(true);
@@ -377,7 +373,6 @@ export default function EditorPage() {
     };
   }, [imgSize]);
 
-  // Disable right-click context menu on the editor to discourage saving image directly
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -394,18 +389,18 @@ export default function EditorPage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleOpenFile}
       />
-      <div style={editorStyles.main}>
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left Panel - Adjustments */}
         {leftPanelOpen && (
-          <aside style={editorStyles.leftPanel}>
-            <div style={editorStyles.panelHeader}>
-              <span style={editorStyles.panelHeaderTitle}>
+          <aside className="w-[280px] min-w-[280px] bg-panel-bg border-r border-zinc-800 p-0 flex flex-col overflow-y-auto h-full">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <span className="text-sm font-semibold text-zinc-200">
                 {t('adjust')}
                 {imgSize && (
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#71717a', marginLeft: 8 }}>
+                  <span className="text-[11px] font-normal text-zinc-500 ml-2">
                     {imgSize.w} × {imgSize.h}px
                   </span>
                 )}
@@ -413,47 +408,32 @@ export default function EditorPage() {
               <button
                 type="button"
                 onClick={() => setLeftPanelOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer', fontSize: 18, padding: 0, lineHeight: 1 }}
+                className="bg-transparent border-none text-zinc-500 cursor-pointer text-lg p-0 leading-none"
               >
                 ×
               </button>
             </div>
 
             {/* Auto adjust */}
-            <div style={editorStyles.section}>
+            <div className="px-4 py-3 border-b border-zinc-800">
               <button
                 type="button"
                 onClick={autoAdjust}
                 disabled={!displayUrl}
-                style={{
-                  width: '100%',
-                  padding: '10px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: '#fff',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: displayUrl ? 'pointer' : 'not-allowed',
-                  opacity: displayUrl ? 1 : 0.5,
-                }}
+                className={`w-full px-4 py-2.5 rounded-lg border-none bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-[13px] font-semibold ${
+                  displayUrl ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-50'
+                }`}
               >
                 {t('autoAdjust')}
               </button>
             </div>
 
             {/* Current image / change */}
-            <div style={editorStyles.section}>
-              <div style={editorStyles.sectionTitle}>{t('currentImage')}</div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 12, color: '#a1a1aa' }}>
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <div className="text-xs font-semibold text-zinc-400 mb-2.5 flex items-center gap-1.5">{t('currentImage')}</div>
+              <div className="flex items-center justify-between gap-2 text-xs text-zinc-400">
                 <span
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
                   title={fileName}
                 >
                   {fileName || '-'}
@@ -461,16 +441,7 @@ export default function EditorPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: 6,
-                    border: '1px solid #3f3f46',
-                    background: 'transparent',
-                    color: '#e4e4e7',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className="px-2.5 py-1.5 rounded-md border border-zinc-700 bg-transparent text-zinc-200 text-xs cursor-pointer whitespace-nowrap"
                 >
                   {t('changeImage')}
                 </button>
@@ -478,15 +449,15 @@ export default function EditorPage() {
             </div>
 
             {/* White Balance */}
-            <div style={editorStyles.section}>
-              <div style={editorStyles.sectionTitle}>{t('whiteBalance')}</div>
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <div className="text-xs font-semibold text-zinc-400 mb-2.5 flex items-center gap-1.5">{t('whiteBalance')}</div>
               <SliderControl label={t('temperature')} value={temperature} onChange={setTemperature} tooltip={t('tooltipTemperature')} />
               <SliderControl label={t('tint')} value={tintVal} onChange={setTintVal} tooltip={t('tooltipTint')} />
             </div>
 
             {/* Light */}
-            <div style={editorStyles.section}>
-              <div style={editorStyles.sectionTitle}>{t('light')}</div>
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <div className="text-xs font-semibold text-zinc-400 mb-2.5 flex items-center gap-1.5">{t('light')}</div>
               <SliderControl label={t('brightness')} value={brightness} onChange={setBrightness} tooltip={t('tooltipBrightness')} />
               <SliderControl label={t('contrast')} value={contrast} onChange={setContrast} tooltip={t('tooltipContrast')} />
               <SliderControl label={t('highlights')} value={highlightsVal} onChange={setHighlightsVal} tooltip={t('tooltipHighlights')} />
@@ -496,26 +467,34 @@ export default function EditorPage() {
             </div>
 
             {/* Reset */}
-            <div style={editorStyles.section}>
-              <button type="button" onClick={resetAdjustments} style={editorStyles.btnOutline}>
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <button
+                type="button"
+                onClick={resetAdjustments}
+                className="w-full px-4 py-[7px] rounded-md border border-zinc-700 bg-transparent text-zinc-400 text-xs cursor-pointer"
+              >
                 {t('resetAdjustments')}
               </button>
             </div>
 
             {/* Export */}
-            <div style={editorStyles.section}>
-              <div style={editorStyles.sectionTitle}>{t('exportTitle')}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <div className="text-xs font-semibold text-zinc-400 mb-2.5 flex items-center gap-1.5">{t('exportTitle')}</div>
+              <div className="flex flex-col gap-2">
                 <div>
-                  <label style={editorStyles.label}>{t('format')}</label>
-                  <select value={format} onChange={(e) => setFormat(e.target.value as 'webp' | 'jpeg' | 'png')} style={editorStyles.input}>
+                  <label className="block text-xs text-zinc-400 mb-1">{t('format')}</label>
+                  <select
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value as 'webp' | 'jpeg' | 'png')}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-2.5 py-[7px] text-white text-[13px] box-border"
+                  >
                     <option value="webp">WebP</option>
                     <option value="jpeg">JPEG</option>
                     <option value="png">PNG</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{ ...editorStyles.label, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <label className="flex items-center gap-1.5 text-xs text-zinc-400 mb-1">
                     {t('quality')} {quality}%
                     <InfoIcon title={t('tooltipQuality')} />
                   </label>
@@ -534,32 +513,29 @@ export default function EditorPage() {
                       if (e.buttons !== 1) return;
                       updateQualityFromPosition(e.clientX);
                     }}
-                    style={{ ...editorStyles.slider, width: '100%' }}
+                    className="flex-1 cursor-pointer outline-none w-full"
                   />
                 </div>
-                <button type="button" onClick={handleExport} disabled={exporting || !displayUrl} style={editorStyles.btn(true)}>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exporting || !displayUrl}
+                  className="px-4 py-[7px] rounded-md border-none bg-indigo-500 text-white text-[13px] font-semibold cursor-pointer transition-colors duration-150"
+                >
                   {exporting ? t('processing') : t('applyExport')}
                 </button>
               </div>
             </div>
           </aside>
         )}
- 
+
         {/* Canvas / Preview */}
-        <main style={editorStyles.canvas}>
+        <main className="flex-1 bg-canvas-bg flex items-center justify-center p-6 min-h-0 relative flex-col">
           {!leftPanelOpen && (
             <button
               type="button"
               onClick={() => setLeftPanelOpen(true)}
-              style={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                zIndex: 10,
-                ...editorStyles.btn(false),
-                fontSize: 12,
-                padding: '5px 10px',
-              }}
+              className="absolute top-2 left-2 z-10 px-2.5 py-1.5 rounded-md border-none bg-zinc-800 text-white text-xs font-semibold cursor-pointer transition-colors duration-150"
             >
               {t('adjust')}
             </button>
@@ -568,32 +544,11 @@ export default function EditorPage() {
             <>
               <div
                 ref={previewContainerRef}
-                style={{
-                  display: cropMode ? 'none' : 'flex',
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: 0,
-                  minHeight: 0,
-                  width: '100%',
-                }}
+                className={`${cropMode ? 'hidden' : 'flex'} flex-1 items-center justify-center min-w-0 min-h-0 w-full`}
               />
               {imgSize && cropMode && (
-                <div
-                  style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 1000,
-                    display: 'flex',
-                    background: 'rgba(0,0,0,0.75)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 24,
-                  }}
-                >
-                  <div ref={cropContainerRef} style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', maxHeight: '100%' }}>
+                <div className="fixed inset-0 z-[1000] flex bg-black/75 backdrop-blur-[8px] items-center justify-center p-6">
+                  <div ref={cropContainerRef} className="relative inline-block max-w-full max-h-full">
                     {(() => {
                       const crop = getCropNumbers();
                       if (!crop) return null;
@@ -605,37 +560,24 @@ export default function EditorPage() {
                         <div
                           role="presentation"
                           onMouseDown={handleCropOverlayMouseDown}
-                          style={{
-                            position: 'absolute',
-                            left: 0,
-                            top: 0,
-                            width: '100%',
-                            height: '100%',
-                            cursor: 'crosshair',
-                            pointerEvents: 'auto',
-                            zIndex: 10,
-                          }}
+                          className="absolute inset-0 w-full h-full cursor-crosshair pointer-events-auto z-10"
                         >
-                          <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: `${topPct}%`, background: 'rgba(0,0,0,0.55)' }} />
-                          <div style={{ position: 'absolute', left: 0, top: `${topPct}%`, width: `${leftPct}%`, height: `${hPct}%`, background: 'rgba(0,0,0,0.55)' }} />
-                          <div style={{ position: 'absolute', left: `${leftPct + wPct}%`, top: `${topPct}%`, width: `${100 - leftPct - wPct}%`, height: `${hPct}%`, background: 'rgba(0,0,0,0.55)' }} />
-                          <div style={{ position: 'absolute', left: 0, top: `${topPct + hPct}%`, width: '100%', height: `${100 - topPct - hPct}%`, background: 'rgba(0,0,0,0.55)' }} />
+                          <div className="absolute left-0 top-0 w-full bg-black/55" style={{ height: `${topPct}%` }} />
+                          <div className="absolute left-0 bg-black/55" style={{ top: `${topPct}%`, width: `${leftPct}%`, height: `${hPct}%` }} />
+                          <div className="absolute bg-black/55" style={{ left: `${leftPct + wPct}%`, top: `${topPct}%`, width: `${100 - leftPct - wPct}%`, height: `${hPct}%` }} />
+                          <div className="absolute left-0 w-full bg-black/55" style={{ top: `${topPct + hPct}%`, height: `${100 - topPct - hPct}%` }} />
                           <div
+                            className="absolute border-2 border-white box-border pointer-events-none shadow-[0_0_0_1px_rgba(0,0,0,0.3)]"
                             style={{
-                              position: 'absolute',
                               left: `${leftPct}%`,
                               top: `${topPct}%`,
                               width: `${wPct}%`,
                               height: `${hPct}%`,
-                              border: '2px solid #fff',
-                              boxSizing: 'border-box',
-                              pointerEvents: 'none',
-                              boxShadow: '0 0 0 1px rgba(0,0,0,0.3)',
                             }}
                           />
-                          <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 12, zIndex: 20 }}>
-                            <button type="button" onClick={applyCrop} style={editorStyles.btn(true)}>Apply</button>
-                            <button type="button" onClick={cancelCrop} style={editorStyles.btn(false)}>Cancel</button>
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 z-20">
+                            <button type="button" onClick={applyCrop} className="px-4 py-[7px] rounded-md border-none bg-indigo-500 text-white text-[13px] font-semibold cursor-pointer transition-colors duration-150">Apply</button>
+                            <button type="button" onClick={cancelCrop} className="px-4 py-[7px] rounded-md border-none bg-zinc-800 text-white text-[13px] font-semibold cursor-pointer transition-colors duration-150">Cancel</button>
                           </div>
                         </div>
                       );
@@ -672,25 +614,14 @@ export default function EditorPage() {
             />
           )}
           {exportError && (
-            <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: '#7f1d1d', color: '#fecaca', padding: '8px 16px', borderRadius: 8, fontSize: 13 }}>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-red-900 text-red-200 px-4 py-2 rounded-lg text-[13px]">
               {exportError}
             </div>
           )}
 
           {/* Bottom toolbar */}
           {displayUrl && (
-            <div style={{
-              position: 'absolute',
-              bottom: 16,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              display: 'flex',
-              gap: 4,
-              background: '#27272a',
-              borderRadius: 10,
-              padding: '6px 8px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-            }}>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1 bg-zinc-800 rounded-[10px] px-2 py-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
               <ToolbarBtn title={t('crop')} onClick={enterCropMode} disabled={!imgSize}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2v4H2v2h4v10a2 2 0 002 2h10v4h2v-4h4v-2H14V6h4V4H8V2H6zm2 4h8v8H8V6z"/></svg>
               </ToolbarBtn>
@@ -707,4 +638,3 @@ export default function EditorPage() {
     </>
   );
 }
-

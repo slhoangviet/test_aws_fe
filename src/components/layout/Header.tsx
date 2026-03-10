@@ -6,39 +6,6 @@ import { usePathname } from 'next/navigation';
 import { useI18n } from '@/i18n';
 import { LanguagePicker } from '@/components/LanguagePicker';
 
-const styles = {
-  header: {
-    height: 48,
-    background: '#1c1c24',
-    borderBottom: '1px solid #27272a',
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0 16px',
-    gap: 24,
-  },
-  logo: {
-    fontWeight: 700,
-    fontSize: 15,
-    letterSpacing: '-0.02em',
-    color: '#fff',
-    textDecoration: 'none',
-  },
-  nav: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-  },
-  navLink: (active: boolean) => ({
-    padding: '6px 12px',
-    borderRadius: 6,
-    background: 'transparent',
-    color: active ? '#fff' : '#71717a',
-    fontSize: 13,
-    fontWeight: active ? 600 : 500,
-    textDecoration: 'none',
-  }),
-};
-
 export default function Header() {
   const { t } = useI18n();
   const pathname = usePathname();
@@ -46,15 +13,25 @@ export default function Header() {
   const isEditor = pathname.startsWith('/editor');
 
   return (
-    <header style={styles.header}>
-      <Link href="/" style={styles.logo}>
+    <header className="h-12 bg-panel-bg border-b border-zinc-800 flex items-center px-4 gap-6">
+      <Link href="/" className="font-bold text-[15px] tracking-tight text-white no-underline">
         {t('appTitle')}
       </Link>
-      <nav style={styles.nav}>
-        <Link href="/" style={styles.navLink(isHome)}>
+      <nav className="flex items-center gap-1">
+        <Link
+          href="/"
+          className={`px-3 py-1.5 rounded-md text-[13px] no-underline ${
+            isHome ? 'text-white font-semibold' : 'text-zinc-500 font-medium'
+          }`}
+        >
           {t('navHome')}
         </Link>
-        <Link href="/editor" style={styles.navLink(isEditor)}>
+        <Link
+          href="/editor"
+          className={`px-3 py-1.5 rounded-md text-[13px] no-underline ${
+            isEditor ? 'text-white font-semibold' : 'text-zinc-500 font-medium'
+          }`}
+        >
           {t('navEditor')}
         </Link>
       </nav>

@@ -1,5 +1,4 @@
 import React, { useCallback, useRef } from 'react';
-import { editorStyles } from './editorStyles';
 import { InfoIcon } from './InfoIcon';
 
 type SliderControlProps = {
@@ -61,13 +60,15 @@ export function SliderControl({
   );
 
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={editorStyles.sliderRow}>
-        <span style={{ ...editorStyles.sliderLabel, display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div className="mb-2">
+      <div className="flex items-center gap-2 mb-0.5">
+        <span className="text-xs text-zinc-400 flex-1 min-w-0 flex items-center gap-1.5">
           {label}
           {tooltip && <InfoIcon title={tooltip} />}
         </span>
-        <span style={editorStyles.sliderValue}>{Math.round(value * 100)}</span>
+        <span className="text-xs text-zinc-200 min-w-[32px] text-right tabular-nums">
+          {Math.round(value * 100)}
+        </span>
       </div>
       <input
         ref={inputRef}
@@ -79,9 +80,8 @@ export function SliderControl({
         onChange={handleInput}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        style={{ ...editorStyles.slider, width: '100%' }}
+        className="flex-1 cursor-pointer outline-none w-full"
       />
     </div>
   );
 }
-

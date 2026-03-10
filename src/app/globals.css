@@ -1,16 +1,16 @@
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import "tailwindcss";
+
+@theme {
+  --color-app-bg: #14141a;
+  --color-panel-bg: #1c1c24;
+  --color-canvas-bg: #0c0c10;
 }
 
 body {
   min-height: 100vh;
-  background: #14141a;
+  background: var(--color-app-bg);
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  color: #e4e4e7;
+  color: var(--color-zinc-200);
 }
 
 /* Custom scrollbar for dark theme */
@@ -24,18 +24,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--color-zinc-700);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: var(--color-zinc-600);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3f3f46 transparent;
+  scrollbar-color: var(--color-zinc-700) transparent;
 }
 
 /* ── Range slider ── */
@@ -47,7 +47,7 @@ input[type="range"] {
   background: transparent;
   padding: 0;
   margin: 0;
-  touch-action: none; /* Cho phép kéo giữ mượt trên touch */
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -59,7 +59,7 @@ input[type="range"]:focus {
 /* Track - Chromium */
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  background: #3f3f46;
+  background: var(--color-zinc-700);
   border-radius: 2px;
   border: none;
 }
@@ -67,7 +67,7 @@ input[type="range"]::-webkit-slider-runnable-track {
 /* Track - Firefox */
 input[type="range"]::-moz-range-track {
   height: 4px;
-  background: #3f3f46;
+  background: var(--color-zinc-700);
   border-radius: 2px;
   border: none;
 }
@@ -79,7 +79,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #a1a1aa;
+  background: var(--color-zinc-400);
   border: none;
   margin-top: -4px;
   pointer-events: auto;
@@ -87,11 +87,11 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  background: #d4d4d8;
+  background: var(--color-zinc-300);
 }
 
 input[type="range"]::-webkit-slider-thumb:active {
-  background: #e4e4e7;
+  background: var(--color-zinc-200);
 }
 
 /* Thumb - Firefox */
@@ -99,16 +99,16 @@ input[type="range"]::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #a1a1aa;
+  background: var(--color-zinc-400);
   border: none;
   pointer-events: auto;
   transition: background 0.15s;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-  background: #d4d4d8;
+  background: var(--color-zinc-300);
 }
 
 input[type="range"]::-moz-range-thumb:active {
-  background: #e4e4e7;
+  background: var(--color-zinc-200);
 }
