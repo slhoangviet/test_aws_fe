@@ -149,6 +149,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       if (response.error) {
         setError(response.error);
       } else if (response.success && response.symbol && response.boardSize) {
+        const symbol = response.symbol;
+        const boardSize = response.boardSize;
         // Chỉ set roomInfo nếu chưa được set bởi game_start
         setRoomInfo((prev) => {
           if (prev && prev.playerCount === 2) {
@@ -157,8 +159,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
           }
           return {
             roomCode: roomCode.toUpperCase(),
-            boardSize: response.boardSize,
-            symbol: response.symbol,
+            boardSize,
+            symbol,
             playerCount: prev?.playerCount ?? 1,
           };
         });
